@@ -139,16 +139,13 @@ export interface Tutor {
 
 // --- Cuaderno de Comunicaciones ---
 
-export interface Cuaderno {
-  id: string
-  alumnoId: string
-  salaId: string
-  año: number
-  tenantId: string
-}
+export type TipoNota = 'general' | 'tarea' | 'recordatorio' | 'urgente' | 'autorizacion'
 
-export interface FirmaEstado {
-  [tutorId: string]: string // ISO timestamp de cuando firmó
+export interface AcuseRecibo {
+  tutorId: string
+  tutorNombre: string
+  alumnoId: string
+  fecha: string // ISO
 }
 
 export interface NotaAdjunto {
@@ -158,23 +155,29 @@ export interface NotaAdjunto {
   tamaño: number // bytes
 }
 
-export interface Nota {
+/**
+ * NotaCuaderno — publicación de un admin o docente para una sala.
+ * Estructura Firestore: /tenants/{tid}/salas/{sid}/notas/{nid}
+ */
+export interface NotaCuaderno {
   id: string
-  cuadernoId: string
   titulo: string
-  cuerpo: string // HTML del rich text
+  contenido: string
+  tipo: TipoNota
   adjuntos: NotaAdjunto[]
   autorId: string
   autorNombre: string
   autorRol: 'admin' | 'docente'
-  fecha: string // ISO timestamp
-  destinatarios: Array<{
-    tipo: 'sala' | 'alumno'
-    id: string
-  }>
-  firmas: FirmaEstado
+  salaId: string
   tenantId: string
+  creadaEn: any // Firestore Timestamp | null durante write pending
+  acusesRecibo: AcuseRecibo[]
+  alumnosDestino: string[] // vacío = todos en la sala
+  visible: boolean
 }
+
+// Alias legacy
+export type Nota = NotaCuaderno
 
 // --- Solicitud de Archivos ---
 

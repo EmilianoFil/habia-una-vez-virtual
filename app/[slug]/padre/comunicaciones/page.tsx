@@ -1,0 +1,199 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { Loader2, Filter } from 'lucide-react'
+import { useTenant } from '@/contexts/TenantContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { useSalas } from '@/hooks/useSalas'
+import { useNotasDeSala } from '@/hooks/useNotas'
+import { useAlumnos } from '@/hooks/useAlumnos'
+import { acusarRecibo } from '@/lib/services/cuaderno.service'
+import { NotaCard } from '@/components/cuaderno/NotaCard'
+import { TipoNota } from '@/lib/types'
+import { TIPO_NOTA_CONFIG } from '@/lib/services/cuaderno.service'
+import { EmptyState } from '@/components/ui/EmptyState'
+
+type FiltroTipo = TipoNota | 'todos'
+
+export default function PadreComunicacionesPage() {
+  const { tenant } = useTenant()
+  const { user } = useAuth()
+  const { salas } = useSalas(tenant.id)
+  const { alumnos } = useAlumnos(tenant.id)
+
+  // Alumnos vinculados a este padre
+  const misAlumnos = useMemo(
+    () => alumnos.filter((a) => a.tutorIds?.includes(user?.uid ?? '__none__')),
+    [alumnos, user?.uid]
+  )
+
+  // Si hay varios hijos, selector
+  const [alumnoSeleccionadoId, setAlumnoSeleccionadoId] = useState<string | null>(null)
+  const alumnoActivo = misAlumnos.find((a) => a.id === alumnoSeleccionadoId) ?? misAlumnos[0] ?? null
+  const salaId = alumnoActivo?.salaActualId ?? null
+  const sala = salas.find((s) => s.id === salaId) ?? null
+
+  const { notas, loading } = useNotasDeSala(tenant.id, salaId)
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
+
+  const notasFiltradas = useMemo(
+    () => filtroTipo === 'todos' ? notas : notas.filter((n) => n.tipo === filtroTipo),
+    [notas, filtroTipo]
+  )
+
+  const notasNoLeidas = notas.filter(
+    (n) => !n.acusesRecibo?.some((a) => a.tutorId === user?.uid && a.alumnoId === alumnoActivo?.id)
+  ).length
+
+  async function handleAcusar(notaId: string) {
+    if (!salaId || !alumnoActivo || !user) return
+    await acusarRecibo(tenant.id, salaId, notaId, {
+      tutorId: user.uid,
+      tutorNombre: user.displayName ?? user.email ?? 'Familiar',
+      alumnoId: alumnoActivo.id,
+      fecha: new Date().toISOString(),
+    })
+  }
+
+  // Padre sin hijos vinculados
+  if (!loading && misAlumnos.length === 0) {
+    return (
+      <div className="p-6 lg:p-8">
+        <EmptyState
+          icon="👧"
+          titulo="Sin hijos vinculados"
+          descripcion="Tu cuenta aún no tiene alumnos vinculados. Contactá a la institución para que activen tu acceso."
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6 lg:p-8 animate-fade-in">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Comunicaciones</h1>
+        {sala && (
+          <p className="text-sm text-gray-500 mt-1">
+            {sala.nombre} · {sala.nivel}
+          </p>
+        )}
+      </div>
+
+      {/* Selector de hijo (si hay varios) */}
+      {misAlumnos.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
+          {misAlumnos.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setAlumnoSeleccionadoId(a.id)}
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={
+                alumnoActivo?.id === a.id
+                  ? { backgroundColor: 'var(--color-primary)', color: 'white' }
+                  : { backgroundColor: '#f3f4f6', color: '#6b7280' }
+              }
+            >
+              {a.datosPersonales?.nombre}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Badge de notas sin leer */}
+      {notasNoLeidas > 0 && (
+        <div
+          className="mb-5 px-4 py-3 rounded-2xl flex items-center gap-3"
+          style={{
+            backgroundColor: 'var(--color-primary-10)',
+            borderLeft: '4px solid var(--color-primary)',
+          }}
+        >
+          <span
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+          >
+            {notasNoLeidas}
+          </span>
+          <p className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
+            {notasNoLeidas === 1
+              ? 'Tenés 1 comunicado sin acusar recibo'
+              : `Tenés ${notasNoLeidas} comunicados sin acusar recibo`}
+          </p>
+        </div>
+      )}
+
+      {/* Filtro por tipo */}
+      {notas.length > 0 && (
+        <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+          <Filter size={14} className="text-gray-400 shrink-0" />
+          <button
+            onClick={() => setFiltroTipo('todos')}
+            className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+            style={
+              filtroTipo === 'todos'
+                ? { backgroundColor: 'var(--color-primary)', color: 'white' }
+                : { backgroundColor: '#f3f4f6', color: '#6b7280' }
+            }
+          >
+            Todos
+          </button>
+          {(['urgente', 'tarea', 'autorizacion', 'recordatorio', 'general'] as TipoNota[]).map((t) => {
+            const cfg = TIPO_NOTA_CONFIG[t]
+            const active = filtroTipo === t
+            return (
+              <button
+                key={t}
+                onClick={() => setFiltroTipo(t)}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                style={
+                  active
+                    ? { backgroundColor: cfg.border, color: cfg.color }
+                    : { backgroundColor: '#f3f4f6', color: '#9ca3af' }
+                }
+              >
+                {cfg.emoji} {cfg.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Feed */}
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 size={24} className="animate-spin text-gray-300" />
+        </div>
+      ) : notasFiltradas.length === 0 ? (
+        <EmptyState
+          icon="✉️"
+          titulo="Sin comunicaciones"
+          descripcion={
+            filtroTipo !== 'todos'
+              ? 'No hay notas de este tipo por ahora.'
+              : 'La institución no publicó comunicaciones todavía.'
+          }
+          accion={
+            filtroTipo !== 'todos'
+              ? { label: 'Ver todas', onClick: () => setFiltroTipo('todos') }
+              : undefined
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          {notasFiltradas.map((nota) => (
+            <NotaCard
+              key={nota.id}
+              nota={nota}
+              mode="padre"
+              alumnoIdPadre={alumnoActivo?.id}
+              tutorId={user?.uid}
+              tutorNombre={user?.displayName ?? user?.email ?? 'Familiar'}
+              onAcusar={handleAcusar}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
