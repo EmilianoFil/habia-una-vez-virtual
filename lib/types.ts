@@ -241,12 +241,24 @@ export interface Evento {
 
 export type EstadoAsistencia = 'presente' | 'ausente' | 'tarde'
 
-export interface RegistroAsistencia {
+export interface RegistroAsistenciaAlumno {
   estado: EstadoAsistencia
-  nota: string
-  docenteId: string
-  docenteNombre: string
-  registradoEn: string
+  nota?: string
+}
+
+/**
+ * AsistenciaDia — registro diario de una sala
+ * Estructura: /tenants/{tenantId}/salas/{salaId}/asistencias/{YYYY-MM-DD}
+ */
+export interface AsistenciaDia {
+  id: string // YYYY-MM-DD
+  tenantId: string
+  salaId: string
+  fecha: string // ISO date (solo YYYY-MM-DD para queries)
+  registros: Record<string, RegistroAsistenciaAlumno> // userId -> registro
+  registradaPorId: string
+  registradaPorNombre: string
+  actualizadaEn: any // Firestore Timestamp
 }
 
 // --- Utilidades ---
