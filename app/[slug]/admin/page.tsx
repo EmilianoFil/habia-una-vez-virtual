@@ -2,49 +2,44 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useTenant } from '@/contexts/TenantContext'
+import { useSalas } from '@/hooks/useSalas'
+import { useAlumnos } from '@/hooks/useAlumnos'
+import { useDocentes } from '@/hooks/useDocentes'
 import {
-  Users, DoorOpen, GraduationCap, BookOpen,
-  FolderOpen, ClipboardList, TrendingUp, Bell
+  Users, DoorOpen, GraduationCap, Copy,
+  TrendingUp, Bell, Loader2
 } from 'lucide-react'
-
-const statCards = [
-  { icon: Users, label: 'Alumnos activos', value: '—', color: '#6366f1' },
-  { icon: DoorOpen, label: 'Salas', value: '—', color: '#ec4899' },
-  { icon: GraduationCap, label: 'Docentes', value: '—', color: '#10b981' },
-  { icon: BookOpen, label: 'Notas este mes', value: '—', color: '#f59e0b' },
-  { icon: FolderOpen, label: 'Archivos pendientes', value: '—', color: '#ef4444' },
-  { icon: ClipboardList, label: 'Presentes hoy', value: '—', color: '#3b82f6' },
-]
+import Link from 'next/link'
 
 export default function AdminDashboardPage() {
-  const { claims, user } = useAuth()
+  const { user } = useAuth()
   const { tenant } = useTenant()
+  
+  const { salas, loading: salasLoading } = useSalas(tenant.id)
+  const { alumnos, loading: alLoading } = useAlumnos(tenant.id)
+  const { docentes, loading: docLoading } = useDocentes(tenant.id)
+
   const hora = new Date().getHours()
   const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
 
+  const statCards = [
+    { icon: Users, label: 'Alumnos', value: alLoading ? <Loader2 size={16} className="animate-spin"/> : alumnos.length, color: '#6366f1' },
+    { icon: DoorOpen, label: 'Salas', value: salasLoading ? <Loader2 size={16} className="animate-spin"/> : salas.length, color: '#ec4899' },
+    { icon: GraduationCap, label: 'Docentes', value: docLoading ? <Loader2 size={16} className="animate-spin"/> : docentes.length, color: '#10b981' },
+  ]
+
   return (
-    <div className="p-6 lg:p-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+    <div className="p-6 lg:p-8 animate-fade-in max-w-5xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             {saludo}, {user?.displayName?.split(' ')[0] ?? 'Admin'} 👋
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Panel de administración — {tenant.name}
-          </p>
+          <p className="text-gray-500 text-sm mt-1">Panel general de la institución</p>
         </div>
-        <button className="relative p-2 rounded-xl bg-white border border-gray-100 shadow-sm hover:bg-gray-50 transition-colors">
-          <Bell size={20} className="text-gray-500" />
-          <span
-            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-          />
-        </button>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {statCards.map((card) => {
           const Icon = card.icon
           return (
@@ -55,49 +50,35 @@ export default function AdminDashboardPage() {
               >
                 <Icon size={20} style={{ color: card.color }} />
               </div>
-              <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-              <p className="text-xs text-gray-500 mt-1">{card.label}</p>
+              <p className="text-2xl font-bold text-gray-900 flex items-center h-8">{card.value}</p>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{card.label}</p>
             </div>
           )
         })}
       </div>
 
-      {/* Quick actions */}
       <div className="card p-6">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-6">
           <TrendingUp size={18} style={{ color: 'var(--color-primary)' }} />
-          <h2 className="font-semibold text-gray-900">Acciones rápidas</h2>
+          <h2 className="font-semibold text-gray-900">Accesos directos</h2>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Nueva nota', emoji: '📝', href: 'admin/cuaderno/nueva' },
-            { label: 'Tomar asistencia', emoji: '✅', href: 'admin/asistencia' },
-            { label: 'Subir archivo', emoji: '📁', href: 'admin/archivos' },
-            { label: 'Crear evento', emoji: '📅', href: 'admin/calendario' },
+            { label: 'Publicar nota', emoji: '📝', href: 'cuaderno' },
+            { label: 'Pedir archivo', emoji: '📂', href: 'archivos' },
+            { label: 'Tomar asistencia', emoji: '✋', href: 'asistencia' },
+            { label: 'Agendar evento', emoji: '📅', href: 'calendario' },
           ].map((action) => (
-            <button
+            <Link
               key={action.label}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 hover:border-gray-200 bg-gray-50 hover:bg-gray-100 transition-all text-center group"
+              href={`/${tenant.slug}/admin/${action.href}`}
+              className="flex flex-col items-center justify-center gap-2 py-6 px-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors text-center"
             >
-              <span className="text-2xl group-hover:scale-110 transition-transform">
-                {action.emoji}
-              </span>
-              <span className="text-xs font-medium text-gray-600">{action.label}</span>
-            </button>
+              <span className="text-2xl mb-1">{action.emoji}</span>
+              <span className="text-xs font-semibold text-gray-600">{action.label}</span>
+            </Link>
           ))}
         </div>
-      </div>
-
-      {/* Placeholder notice */}
-      <div
-        className="mt-6 p-4 rounded-xl border text-sm"
-        style={{
-          backgroundColor: 'var(--color-primary-10)',
-          borderColor: 'var(--color-primary-light)',
-          color: 'var(--color-primary)',
-        }}
-      >
-        Los datos reales se cargarán cuando se implementen los módulos (Paso 3 en adelante).
       </div>
     </div>
   )
