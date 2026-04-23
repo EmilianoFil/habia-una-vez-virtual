@@ -198,8 +198,8 @@ export interface SolicitudArchivo {
   archivoNombre: string | null
   creadaPorId: string
   creadaPorNombre: string
-  creadaEn: string
-  entregadaEn: string | null
+  creadaEn: any // Firestore Timestamp
+  entregadaEn: any | null // Firestore Timestamp
 }
 
 // --- Comunicaciones Masivas ---
