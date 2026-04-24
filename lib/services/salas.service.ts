@@ -5,7 +5,7 @@ import {
 import { db } from '@/lib/firebase'
 import { Sala } from '@/lib/types'
 
-type CreateSalaData = Pick<Sala, 'nombre' | 'turno' | 'nivel' | 'cupo'>
+type CreateSalaData = Pick<Sala, 'nombre' | 'turnoId' | 'nivel' | 'cupo'>
 
 export async function createSala(tenantId: string, data: CreateSalaData): Promise<string> {
   const ref = await addDoc(collection(db, `tenants/${tenantId}/salas`), {

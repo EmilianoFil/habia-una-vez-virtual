@@ -1,0 +1,110 @@
+import nodemailer from 'nodemailer'
+import { EmailSettings, NotaCuaderno } from '@/lib/types'
+
+function getTransporter(settings: EmailSettings) {
+  return nodemailer.createTransport({
+    service: settings.provider === 'gmail' ? 'gmail' : undefined,
+    host: settings.provider === 'smtp' ? settings.host : undefined,
+    port: settings.provider === 'smtp' ? settings.port : undefined,
+    auth: {
+      user: settings.email,
+      pass: settings.appPassword,
+    },
+    // Forzar TLS para SMTP si es necesario
+    secure: settings.provider === 'smtp' && settings.port === 465,
+  })
+}
+
+/**
+ * Envía un mail de bienvenida con el link de reseteo de clave
+ */
+export async function sendWelcomeEmail(
+  settings: EmailSettings,
+  to: string,
+  resetLink: string,
+  tenantName: string
+) {
+  if (!settings.enabled || !settings.email || !settings.appPassword) return
+
+  const transporter = getTransporter(settings)
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+      <h2 style="color: #6366f1; border-bottom: 2px solid #6366f1; padding-bottom: 10px;">¡Bienvenido a ${tenantName}!</h2>
+      <p>Hola,</p>
+      <p>Se te ha concedido acceso al cuaderno virtual de tu hijo/a en nuestra institución.</p>
+      <p>Para poder ingresar y ver toda la información, necesitas configurar tu contraseña haciendo clic en el siguiente botón:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetLink}" style="background-color: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);">
+          Configurar mi contraseña
+        </a>
+      </div>
+      <p style="font-size: 12px; color: #666; background: #f9fafb; padding: 15px; border-radius: 8px;">
+        Si el botón no funciona, copia y pega este link en tu navegador:<br>
+        <span style="color: #6366f1; word-break: break-all;">${resetLink}</span>
+      </p>
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+      <p style="font-size: 11px; color: #999; text-align: center;">Esta es una notificación automática de ${tenantName} vía Había una vez Virtual.</p>
+    </div>
+  `
+
+  await transporter.sendMail({
+    from: `"${tenantName}" <${settings.email}>`,
+    to,
+    subject: `Acceso concedido — ${tenantName}`,
+    html: htmlContent,
+  })
+}
+
+/**
+ * Envía notificación de nueva comunicación en el cuaderno
+ */
+export async function sendNoteEmail(
+  settings: EmailSettings,
+  to: string,
+  nota: NotaCuaderno,
+  tenantName: string
+) {
+  if (!settings.enabled || !settings.email || !settings.appPassword) return
+
+  const transporter = getTransporter(settings)
+  
+  // Limpiar un poco el contenido HTML si viene de un editor
+  const preview = nota.contenido.replace(/<[^>]*>/g, '').slice(0, 150) + '...'
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+      <div style="background-color: #6366f1; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 20px;">Nueva comunicación</h1>
+        <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px;">${tenantName}</p>
+      </div>
+      
+      <div style="padding: 25px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: white;">
+        <h2 style="margin-top: 0; color: #111827;">${nota.titulo}</h2>
+        <p style="color: #4b5563;">${preview}</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://habia-una-vez-virtual.web.app/login" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+            Ver cuaderno completo
+          </a>
+        </div>
+        
+        <p style="font-size: 12px; color: #9ca3af; border-top: 1px solid #f3f4f6; pt: 15px; margin-top: 20px;">
+          Enviado por: ${nota.autorNombre} (${nota.autorRol === 'admin' ? 'Administración' : 'Docente'})
+        </p>
+      </div>
+      
+      <p style="font-size: 11px; color: #999; text-align: center; margin-top: 20px;">
+        Recibes este mail porque eres tutor/a en ${tenantName}.<br>
+        Había una vez Virtual.
+      </p>
+    </div>
+  `
+
+  await transporter.sendMail({
+    from: `"${tenantName}" <${settings.email}>`,
+    to,
+    subject: `📝 Nueva nota: ${nota.titulo}`,
+    html: htmlContent,
+  })
+}

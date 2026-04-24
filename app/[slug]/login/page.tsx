@@ -66,7 +66,8 @@ export default function LoginPage() {
       await createSessionCookie(result.user)
       router.replace(getRoleBasePath(slug, userClaims.role))
     } catch (err: any) {
-      setError(getAuthErrorMessage(err?.code ?? ''))
+      console.error('[Login] Error:', err)
+      setError(err?.message || getAuthErrorMessage(err?.code ?? ''))
       setIsSubmitting(false)
     }
   }
@@ -98,7 +99,8 @@ export default function LoginPage() {
       await createSessionCookie(result.user)
       router.replace(getRoleBasePath(slug, userClaims.role))
     } catch (err: any) {
-      setError(getAuthErrorMessage(err?.code ?? ''))
+      console.error('[Login Google] Error:', err)
+      setError(err?.message || getAuthErrorMessage(err?.code ?? ''))
       setIsSubmitting(false)
     }
   }
@@ -125,7 +127,7 @@ export default function LoginPage() {
         {/* Contenido */}
         <div className="relative z-10 text-center">
           {tenant.logo ? (
-            <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-sm mx-auto mb-6 flex items-center justify-center overflow-hidden">
+            <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-sm mx-auto mb-6 flex items-center justify-center overflow-hidden border border-white/10">
               <Image
                 src={tenant.logo}
                 alt={tenant.name}
@@ -135,13 +137,16 @@ export default function LoginPage() {
               />
             </div>
           ) : (
-            <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-sm mx-auto mb-6 flex items-center justify-center text-5xl font-bold text-white">
+            <div 
+              className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-sm mx-auto mb-6 flex items-center justify-center text-5xl font-bold border border-white/10"
+              style={{ color: 'var(--color-primary-contrast)' }}
+            >
               {tenant.name.charAt(0)}
             </div>
           )}
 
-          <h1 className="text-3xl font-extrabold text-white mb-3">{tenant.name}</h1>
-          <p className="text-white/70 text-lg max-w-xs">
+          <h1 className="text-3xl font-extrabold mb-3" style={{ color: 'var(--color-primary-contrast)' }}>{tenant.name}</h1>
+          <p className="text-lg max-w-xs" style={{ color: 'var(--color-primary-contrast)', opacity: 0.8 }}>
             El portal digital de tu institución
           </p>
 
@@ -155,7 +160,8 @@ export default function LoginPage() {
             ].map((feature) => (
               <div
                 key={feature}
-                className="flex items-center gap-3 text-white/80 text-sm"
+                className="flex items-center gap-3 text-sm"
+                style={{ color: 'var(--color-primary-contrast)', opacity: 0.9 }}
               >
                 <span className="text-base">{feature.slice(0, 2)}</span>
                 <span>{feature.slice(3)}</span>

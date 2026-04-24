@@ -28,7 +28,13 @@ export default function AdminCuadernoPage() {
 
   async function handleCreate(data: CreateNotaData) {
     if (!salaId) return
-    await createNota(tenant.id, salaId, data)
+    const id = await createNota(tenant.id, salaId, data)
+    
+    // Notificar por mail (background)
+    fetch('/api/notifications/send-communication', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId: tenant.id, salaId, notaId: id })
+    }).catch(err => console.error('[Notification] Error triggering email:', err))
   }
 
   async function handleToggleVisibilidad(notaId: string, visible: boolean) {

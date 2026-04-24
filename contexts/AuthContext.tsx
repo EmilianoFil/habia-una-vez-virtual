@@ -11,11 +11,11 @@ import {
 import { onAuthStateChanged, User } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import {
-  UserClaims,
-  getUserClaims,
   createSessionCookie,
   logout as authLogout,
 } from '@/lib/auth'
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 // ============================================================
 // AuthContext — disponible para toda la app bajo TenantProvider
@@ -38,21 +38,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userClaims = await getUserClaims(firebaseUser)
-        setUser(firebaseUser)
-        setClaims(userClaims)
+      try {
+        if (firebaseUser) {
+          const userClaims = await getUserClaims(firebaseUser)
+          setUser(firebaseUser)
+          setClaims(userClaims)
 
-        // Solo crear session cookie si no existe aún (evita llamada en cada page load)
-        const hasSession = document.cookie.includes('__claims')
-        if (!hasSession) {
-          await createSessionCookie(firebaseUser)
+          // En producción, Firebase Hosting elimina __claims, pero deja __session (que es httpOnly)
+          // Usamos una variable de estado o localStorage para no re-crear sesión mil veces si falla
+          const lastSessionUid = localStorage.getItem('last_session_uid')
+          if (lastSessionUid !== firebaseUser.uid) {
+            try {
+              await createSessionCookie(firebaseUser)
+              localStorage.setItem('last_session_uid', firebaseUser.uid)
+
+              // Registrar último ingreso si tenemos tenantId y rol
+              if (userClaims?.tenantId) {
+                const now = new Date().toISOString()
+                if (userClaims.role === 'padre') {
+                  const tutorRef = doc(db, `tenants/${userClaims.tenantId}/tutores/${firebaseUser.uid}`)
+                  await updateDoc(tutorRef, { lastLogin: now }).catch(() => {})
+                } else if (userClaims.role === 'admin' || userClaims.role === 'docente') {
+                  const docenteRef = doc(db, `tenants/${userClaims.tenantId}/docentes/${firebaseUser.uid}`)
+                  await updateDoc(docenteRef, { 'acceso.lastLogin': now }).catch(() => {})
+                }
+              }
+            } catch (e) {
+              console.error('[AuthContext] No se pudo crear sesión segura:', e)
+            }
+          }
+        } else {
+          setUser(null)
+          setClaims(null)
+          localStorage.removeItem('last_session_uid')
         }
-      } else {
-        setUser(null)
-        setClaims(null)
+      } catch (err) {
+        console.error('[AuthContext] Error en onAuthStateChanged:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return unsubscribe

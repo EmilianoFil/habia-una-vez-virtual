@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Plus, Trash2, Loader2, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Trash2, Loader2, CheckCircle2, Save, Plus } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { useSalas } from '@/hooks/useSalas'
-import { createAlumno } from '@/lib/services/alumnos.service'
+import { useAlumno } from '@/hooks/useAlumnos'
+import { updateAlumno } from '@/lib/services/alumnos.service'
 import { PhotoUpload } from '@/components/ui/PhotoUpload'
 import { SectionHeader } from '@/components/ui/PageHeader'
 import { ContactoEmergencia, AutorizadoRetiro, AlumnoDocumento } from '@/lib/types'
@@ -18,11 +19,14 @@ type Tab = typeof TABS[number]
 const EMPTY_CONTACTO: ContactoEmergencia = { nombre: '', relacion: '', telefono: '', email: '' }
 const EMPTY_AUTORIZADO: AutorizadoRetiro = { nombre: '', relacion: '', telefono: '', foto: null, dni: '' }
 
-export default function NuevoAlumnoPage() {
+export default function EditarAlumnoPage() {
   const { tenant } = useTenant()
   const router = useRouter()
   const params = useParams()
   const slug = params.slug as string
+  const alumnoId = params.alumnoId as string
+  
+  const { alumno, loading: loadingAlumno } = useAlumno(tenant.id, alumnoId)
   const { salas } = useSalas(tenant.id)
 
   const [tab, setTab] = useState<Tab>('Datos personales')
@@ -37,7 +41,6 @@ export default function NuevoAlumnoPage() {
   const [dni, setDni] = useState('')
   const [foto, setFoto] = useState<string | null>(null)
   const [salaId, setSalaId] = useState('')
-  const alumnoTempId = `temp-${Date.now()}`
 
   // Datos médicos
   const [alergias, setAlergias] = useState('')
@@ -48,10 +51,32 @@ export default function NuevoAlumnoPage() {
   const [documentosMedicos, setDocumentosMedicos] = useState<AlumnoDocumento[]>([])
 
   // Contactos
-  const [contactos, setContactos] = useState<ContactoEmergencia[]>([{ ...EMPTY_CONTACTO }])
+  const [contactos, setContactos] = useState<ContactoEmergencia[]>([])
 
   // Autorizados
   const [autorizados, setAutorizados] = useState<AutorizadoRetiro[]>([])
+
+  // Cargar datos cuando el alumno esté listo
+  useEffect(() => {
+    if (alumno) {
+      setNombre(alumno.datosPersonales.nombre)
+      setApellido(alumno.datosPersonales.apellido)
+      setFechaNacimiento(alumno.datosPersonales.fechaNacimiento || '')
+      setDni(alumno.datosPersonales.dni || '')
+      setFoto(alumno.datosPersonales.foto)
+      setSalaId(alumno.salaActualId || '')
+      
+      setAlergias(alumno.datosMedicos.alergias || '')
+      setMedicacion(alumno.datosMedicos.medicacionHabitual || '')
+      setObraSocial(alumno.datosMedicos.obraSocial || '')
+      setPediatraNombre(alumno.datosMedicos.pediatraNombre || '')
+      setPediatraTelefono(alumno.datosMedicos.pediatraTelefono || '')
+      setDocumentosMedicos(alumno.datosMedicos.documentos || [])
+      
+      setContactos(alumno.contactosEmergencia?.length > 0 ? alumno.contactosEmergencia : [{ ...EMPTY_CONTACTO }])
+      setAutorizados(alumno.autorizados || [])
+    }
+  }, [alumno])
 
   function addContacto() { setContactos([...contactos, { ...EMPTY_CONTACTO }]) }
   function removeContacto(i: number) { setContactos(contactos.filter((_, idx) => idx !== i)) }
@@ -78,8 +103,7 @@ export default function NuevoAlumnoPage() {
     setSaving(true)
     setError(null)
     try {
-      const salaNombre = salas.find((s) => s.id === salaId)?.nombre ?? ''
-      await createAlumno(tenant.id, {
+      await updateAlumno(tenant.id, alumnoId, {
         datosPersonales: { nombre: nombre.trim(), apellido: apellido.trim(), fechaNacimiento, dni, foto },
         datosMedicos: { 
           alergias, 
@@ -92,10 +116,9 @@ export default function NuevoAlumnoPage() {
         contactosEmergencia: contactos.filter((c) => c.nombre.trim()),
         autorizados: autorizados.filter((a) => a.nombre.trim()),
         salaActualId: salaId || null,
-        salaNombre,
       })
       setSaved(true)
-      setTimeout(() => router.push(`/${slug}/admin/alumnos`), 1500)
+      setTimeout(() => router.push(`/${slug}/admin/alumnos/${alumnoId}`), 1500)
     } catch (err: any) {
       setError(err.message ?? 'Error al guardar')
     } finally {
@@ -103,13 +126,21 @@ export default function NuevoAlumnoPage() {
     }
   }
 
+  if (loadingAlumno) {
+    return (
+      <div className="flex justify-center items-center min-h-screen font-black text-gray-300">
+        <Loader2 size={28} className="animate-spin" />
+      </div>
+    )
+  }
+
   if (saved) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <CheckCircle2 size={64} className="mx-auto mb-4" style={{ color: 'var(--color-primary)' }} />
-          <h2 className="text-xl font-bold text-gray-900">¡Alumno creado!</h2>
-          <p className="text-gray-500 text-sm mt-1">Redirigiendo...</p>
+          <h2 className="text-xl font-bold text-gray-900">¡Cambios guardados!</h2>
+          <p className="text-gray-500 text-sm mt-1">Redirigiendo al perfil...</p>
         </div>
       </div>
     )
@@ -126,8 +157,8 @@ export default function NuevoAlumnoPage() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nuevo alumno</h1>
-          <p className="text-sm text-gray-500">Completá los datos del alumno</p>
+          <h1 className="text-2xl font-bold text-gray-900">Editar alumno</h1>
+          <p className="text-sm text-gray-500">Modificá los datos de {nombre}</p>
         </div>
       </div>
 
@@ -163,7 +194,7 @@ export default function NuevoAlumnoPage() {
               <PhotoUpload
                 value={foto}
                 onChange={setFoto}
-                storagePath={`tenants/${tenant.id}/alumnos/${alumnoTempId}/foto`}
+                storagePath={`tenants/${tenant.id}/alumnos/${alumnoId}/foto`}
                 label="Foto"
                 size="lg"
               />
@@ -181,7 +212,7 @@ export default function NuevoAlumnoPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Fecha de nacimiento 
+                      Fecha de nacimiento
                       {fechaNacimiento && (
                         <span className="ml-2 text-indigo-500 font-bold">
                           ({calcularEdadDetalle(fechaNacimiento)})
@@ -199,6 +230,9 @@ export default function NuevoAlumnoPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Sala asignada</label>
+              <p className="text-[10px] text-amber-600 mb-2 font-bold uppercase tracking-widest">
+                Nota: El cambio de sala genera un registro en el historial.
+              </p>
               <select className="input" value={salaId} onChange={(e) => setSalaId(e.target.value)}>
                 <option value="">Sin sala por ahora</option>
                 {salas.map((s) => (
@@ -253,7 +287,7 @@ export default function NuevoAlumnoPage() {
               <DocumentUpload 
                 documentos={documentosMedicos} 
                 onChange={setDocumentosMedicos}
-                storagePath={`tenants/${tenant.id}/alumnos/${alumnoTempId}/medicos`}
+                storagePath={`tenants/${tenant.id}/alumnos/${alumnoId}/medicos`}
               />
             </div>
           </div>
@@ -297,11 +331,6 @@ export default function NuevoAlumnoPage() {
         {tab === 'Autorizados' && (
           <div className="space-y-4">
             <SectionHeader titulo="Autorizados a retirar" descripcion="Personas que pueden retirar al alumno de la institución." />
-            {autorizados.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">
-                No hay autorizados cargados. Podés agregarlos ahora o después.
-              </p>
-            )}
             {autorizados.map((a, i) => (
               <div key={i} className="p-4 bg-gray-50 rounded-2xl space-y-3">
                 <div className="flex justify-between items-center">
@@ -314,7 +343,7 @@ export default function NuevoAlumnoPage() {
                   <PhotoUpload
                     value={a.foto}
                     onChange={(url) => updateAutorizado(i, 'foto', url)}
-                    storagePath={`tenants/${tenant.id}/alumnos/${alumnoTempId}/autorizados/${i}`}
+                    storagePath={`tenants/${tenant.id}/alumnos/${alumnoId}/autorizados/${i}`}
                     size="sm"
                     shape="circle"
                     label="Foto"
@@ -364,9 +393,9 @@ export default function NuevoAlumnoPage() {
               Siguiente →
             </button>
           ) : (
-            <button onClick={handleGuardar} disabled={saving} className="btn-primary px-6 py-2.5">
-              {saving && <Loader2 size={15} className="animate-spin" />}
-              Guardar alumno
+            <button onClick={handleGuardar} disabled={saving} className="btn-primary px-6 py-2.5 flex items-center gap-2">
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Guardar cambios
             </button>
           )}
         </div>

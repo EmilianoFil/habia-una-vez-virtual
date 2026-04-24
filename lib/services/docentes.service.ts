@@ -6,7 +6,7 @@ import { Docente } from '@/lib/types'
 
 export type CreateDocenteData = Pick<
   Docente,
-  'nombre' | 'apellido' | 'email' | 'telefono' | 'dni' | 'turno'
+  'nombre' | 'apellido' | 'email' | 'telefono' | 'dni' | 'turno' | 'salasIds'
 >
 
 export async function createDocente(

@@ -109,3 +109,36 @@ export async function cambiarSalaAlumno(
 export async function deactivateAlumno(tenantId: string, alumnoId: string): Promise<void> {
   await updateDoc(doc(db, `tenants/${tenantId}/alumnos/${alumnoId}`), { activo: false })
 }
+
+/**
+ * Vincula un tutor (usuario con rol padre) a un alumno y crea su registro de tutor si no existe
+ */
+export async function vincularTutorAlumno(
+  tenantId: string,
+  alumnoId: string,
+  uid: string,
+  tutorData: { nombre: string, email: string }
+): Promise<void> {
+  const batch = writeBatch(db)
+  
+  // 1. Agregar UID al alumno
+  const alumnoRef = doc(db, `tenants/${tenantId}/alumnos/${alumnoId}`)
+  batch.update(alumnoRef, {
+    tutorIds: arrayUnion(uid)
+  })
+
+  // 2. Crear o actualizar el perfil del Tutor
+  const tutorRef = doc(db, `tenants/${tenantId}/tutores/${uid}`)
+  batch.set(tutorRef, {
+    id: uid,
+    uid,
+    tenantId,
+    nombre: tutorData.nombre,
+    email: tutorData.email,
+    alumnoIds: arrayUnion(alumnoId),
+    activo: true,
+    actualizadoEn: serverTimestamp()
+  }, { merge: true })
+
+  await batch.commit()
+}

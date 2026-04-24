@@ -29,7 +29,13 @@ export default function DocenteCuadernoPage() {
 
   async function handleCreate(data: CreateNotaData) {
     if (!salaActiva) return
-    await createNota(tenant.id, salaActiva, data)
+    const id = await createNota(tenant.id, salaActiva, data)
+    
+    // Notificar por mail (background)
+    fetch('/api/notifications/send-communication', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId: tenant.id, salaId: salaActiva, notaId: id })
+    }).catch(err => console.error('[Notification] Error triggering email:', err))
   }
 
   async function handleToggle(notaId: string, visible: boolean) {

@@ -35,3 +35,5 @@ firebase-debug.log*
 public/workbox-*.js
 public/sw.js
 public/swe-worker-*.js
+habia-una-vez-virtual-firebase-adminsdk-fbsvc-41849acac3.json
+.env.production

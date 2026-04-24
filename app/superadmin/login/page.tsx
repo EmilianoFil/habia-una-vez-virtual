@@ -54,7 +54,7 @@ export default function SuperadminLoginPage() {
       await createSessionCookie(result.user)
       router.replace('/superadmin')
     } catch (err: any) {
-      setError(getAuthErrorMessage(err?.code ?? ''))
+      setError(err?.message || getAuthErrorMessage(err?.code ?? ''))
       setIsSubmitting(false)
     }
   }

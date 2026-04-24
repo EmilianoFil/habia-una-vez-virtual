@@ -51,6 +51,34 @@ export function calcularEdad(fechaNacimiento: string): number {
 }
 
 /**
+ * Calcula la edad detallada: "3 años y 2 meses"
+ */
+export function calcularEdadDetalle(fechaNacimiento: string): string {
+  if (!fechaNacimiento) return ''
+  const hoy = new Date()
+  const nac = new Date(fechaNacimiento)
+  
+  let years = hoy.getFullYear() - nac.getFullYear()
+  let months = hoy.getMonth() - nac.getMonth()
+  let days = hoy.getDate() - nac.getDate()
+
+  if (days < 0) {
+    months--
+  }
+  if (months < 0) {
+    years--
+    months += 12
+  }
+
+  const yPart = years === 1 ? '1 año' : `${years} años`
+  const mPart = months === 1 ? '1 mes' : `${months} meses`
+
+  if (years === 0) return mPart
+  if (months === 0) return yPart
+  return `${yPart} y ${mPart}`
+}
+
+/**
  * Convierte un color hex a componentes RGB.
  */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {

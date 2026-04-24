@@ -17,6 +17,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: { template: `%s | ${tenant.name}`, default: tenant.name },
     description: `Portal digital de ${tenant.name}`,
+    icons: {
+      icon: tenant.logo || '/favicon.ico',
+      apple: tenant.logo || '/favicon.ico',
+    }
   }
 }
 

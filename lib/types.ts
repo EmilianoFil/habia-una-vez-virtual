@@ -17,6 +17,26 @@ export interface TenantConfig {
     address?: string
     website?: string
   }
+  configuracion?: {
+    turnos?: TurnoConfig[]
+    emailSettings?: EmailSettings
+  }
+}
+
+export interface EmailSettings {
+  enabled: boolean
+  provider: 'gmail' | 'smtp'
+  email: string
+  appPassword?: string // Para gmail/smtp
+  host?: string
+  port?: number
+}
+
+export interface TurnoConfig {
+  id: string
+  nombre: string
+  inicio: string // "08:00"
+  fin: string    // "12:00"
 }
 
 export interface TenantFirestoreData {
@@ -28,11 +48,13 @@ export interface TenantFirestoreData {
 
 // --- Roles ---
 
-export type UserRole = 'superadmin' | 'admin' | 'docente' | 'padre'
+export type UserRole = 'superadmin' | 'admin' | 'docente' | 'administrativo' | 'padre'
+export type AccesoScope = 'institucion' | 'salas_propias'
 
 export interface UserCustomClaims {
   role: UserRole
-  tenantId?: string // undefined para superadmin
+  tenantId?: string
+  scope?: AccesoScope
 }
 
 // --- Sala ---
@@ -40,7 +62,7 @@ export interface UserCustomClaims {
 export interface Sala {
   id: string
   nombre: string
-  turno: 'mañana' | 'tarde' | 'vespertino' | 'completo'
+  turnoId: string // ID del turno configurado en el tenant
   nivel: string // "Jardín 3 años", "1° grado", etc.
   cupo: number
   docenteIds: string[]
@@ -65,12 +87,21 @@ export interface DatosMedicos {
   obraSocial: string
   pediatraNombre: string
   pediatraTelefono: string
+  documentos?: AlumnoDocumento[]
+}
+
+export interface AlumnoDocumento {
+  id: string
+  nombre: string
+  url: string
+  fechaCarga: string // ISO
 }
 
 export interface ContactoEmergencia {
   nombre: string
   relacion: string
   telefono: string
+  email?: string
 }
 
 export interface AutorizadoRetiro {
@@ -79,6 +110,7 @@ export interface AutorizadoRetiro {
   telefono: string
   foto: string | null
   dni: string
+  email?: string
 }
 
 export interface HistorialSala {
@@ -118,8 +150,15 @@ export interface Docente {
     horarioEgreso: string  // "12:00"
   }
   salasIds: string[]
-  uid: string | null // Firebase Auth UID, null si no tiene login aún
+  uid: string | null
   activo: boolean
+  // Datos de acceso al sistema
+  acceso?: {
+    habilitado: boolean
+    role: 'docente' | 'administrativo'
+    scope: AccesoScope
+    invitadoEn?: string
+  }
 }
 
 // --- Tutor / Padre ---

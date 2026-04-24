@@ -3,6 +3,7 @@
 import { ReactNode, CSSProperties } from 'react'
 import { TenantConfig } from '@/lib/types'
 import { TenantProvider } from '@/contexts/TenantContext'
+import { textColorForBackground } from '@/lib/utils'
 
 interface ThemeWrapperProps {
   children: ReactNode
@@ -17,10 +18,13 @@ interface ThemeWrapperProps {
  * Se monta en el [slug]/layout.tsx como hijo del Server Component.
  */
 export function ThemeWrapper({ children, tenant }: ThemeWrapperProps) {
+  const isLight = textColorForBackground(tenant.primaryColor) === 'dark'
+  
   const cssVars = {
     '--color-primary': tenant.primaryColor,
     '--color-primary-light': `color-mix(in srgb, ${tenant.primaryColor} 25%, white)`,
     '--color-primary-dark': `color-mix(in srgb, ${tenant.primaryColor} 80%, black)`,
+    '--color-primary-contrast': isLight ? '#000000' : '#ffffff',
     '--color-secondary': tenant.secondaryColor,
     '--color-secondary-light': `color-mix(in srgb, ${tenant.secondaryColor} 25%, white)`,
     '--color-secondary-dark': `color-mix(in srgb, ${tenant.secondaryColor} 80%, black)`,

@@ -26,9 +26,11 @@ export interface UserClaims {
 
 /** Devuelve el path base del dashboard según rol */
 export function getRoleBasePath(slug: string, role: UserRole): string {
+  if (role === 'superadmin') {
+    return slug ? `/${slug}/admin` : '/superadmin'
+  }
+
   switch (role) {
-    case 'superadmin':
-      return '/superadmin'
     case 'admin':
       return `/${slug}/admin`
     case 'docente':
@@ -71,10 +73,16 @@ export async function createSessionCookie(user: User): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
     })
-    return response.ok
+    
+    if (!response.ok) {
+      const respData = await response.json().catch(() => ({}))
+      throw new Error(respData.error || 'No se pudo verificar la sesión en el servidor.')
+    }
+    
+    return true
   } catch (error) {
     console.error('[Auth] Error creando sesión:', error)
-    return false
+    throw error // Lanzar expícitamente para que la UI pare de cargar
   }
 }
 

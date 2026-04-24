@@ -58,6 +58,21 @@ export function middleware(request: NextRequest) {
   let parsedClaims: { role: UserRole; tenantId?: string } | null = null
   if (claimsCookie) {
     try { parsedClaims = JSON.parse(claimsCookie) } catch {}
+  } else if (sessionCookie && !isDev) {
+    // Firebase Hosting elimina todas las cookies excepto __session.
+    // Decodificamos el payload de la cookie JWT __session para leer los custom claims.
+    try {
+      const payloadBase64 = sessionCookie.split('.')[1]
+      const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf-8')
+      const decodedPayload = JSON.parse(payloadJson)
+      
+      parsedClaims = {
+        role: decodedPayload.role || null,
+        tenantId: decodedPayload.tenantId || null
+      }
+    } catch (e) {
+      console.error('[Middleware] Error decodificando __session:', e)
+    }
   }
 
   // --- Superadmin routes ---
@@ -101,12 +116,14 @@ export function middleware(request: NextRequest) {
 
   // Verificación de rol vs ruta
   if (parsedClaims?.role && secondSegment) {
-    const expectedSegment = parsedClaims.role === 'superadmin'
-      ? 'superadmin'
-      : parsedClaims.role // 'admin', 'docente', 'padre'
+    const isSuperadmin = parsedClaims.role === 'superadmin'
+    const expectedSegment = isSuperadmin ? 'superadmin' : parsedClaims.role
 
-    // Si el role segment no coincide con la ruta solicitada, redirigir al correcto
+    // Superadmin puede entrar a las rutas /admin de cualquier tenant
+    const canAccessAdmin = isSuperadmin && secondSegment === 'admin'
+
     if (
+      !canAccessAdmin &&
       secondSegment !== expectedSegment &&
       ['admin', 'docente', 'padre'].includes(secondSegment)
     ) {

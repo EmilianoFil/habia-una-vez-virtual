@@ -20,7 +20,9 @@ import {
   LogOut,
   ChevronRight,
   School,
+  ShieldCheck,
 } from 'lucide-react'
+import { LoadingScreen } from '@/components/ui/LoadingScreen'
 
 // ============================================================
 // Definición de ítems de navegación por rol
@@ -39,7 +41,7 @@ function getNavItems(slug: string, role: UserRole): NavItem[] {
       { icon: LayoutDashboard, label: 'Panel', href: `${base}/admin` },
       { icon: Users, label: 'Alumnos', href: `${base}/admin/alumnos` },
       { icon: DoorOpen, label: 'Salas', href: `${base}/admin/salas` },
-      { icon: GraduationCap, label: 'Docentes', href: `${base}/admin/docentes` },
+      { icon: ShieldCheck, label: 'Equipo & Accesos', href: `${base}/admin/equipo` },
       { icon: BookOpen, label: 'Cuaderno', href: `${base}/admin/cuaderno` },
       { icon: FolderOpen, label: 'Archivos', href: `${base}/admin/archivos` },
       { icon: Megaphone, label: 'Comunicados', href: `${base}/admin/comunicaciones` },
@@ -89,8 +91,8 @@ function Sidebar({ navItems }: { navItems: NavItem[] }) {
         style={{ borderBottomColor: 'var(--color-primary-light)' }}
       >
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden"
-          style={{ backgroundColor: 'var(--color-primary)' }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 overflow-hidden"
+          style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
         >
           {tenant.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -208,8 +210,9 @@ function BottomNav({ navItems }: { navItems: NavItem[] }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const params = useParams()
   const slug = (params?.slug as string) ?? ''
-  const { claims } = useAuth()
+  const { claims, loading } = useAuth()
 
+  if (loading) return <LoadingScreen />
   if (!claims) return null
 
   const navItems = getNavItems(slug, claims.role)

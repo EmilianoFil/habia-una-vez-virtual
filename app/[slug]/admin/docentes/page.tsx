@@ -21,6 +21,7 @@ const TURNO_LABELS: Record<string, string> = {
 const DEFAULT_FORM = {
   nombre: '', apellido: '', email: '', telefono: '', dni: '',
   turno: { nombre: 'mañana', horarioIngreso: '08:00', horarioEgreso: '12:00' },
+  salasIds: [] as string[]
 }
 
 export default function DocentesPage() {
@@ -40,6 +41,14 @@ export default function DocentesPage() {
   function setTurnoField(key: string, value: string) {
     setForm((prev) => ({ ...prev, turno: { ...prev.turno, nombre: key === 'nombre' ? value : prev.turno.nombre, horarioIngreso: key === 'horarioIngreso' ? value : prev.turno.horarioIngreso, horarioEgreso: key === 'horarioEgreso' ? value : prev.turno.horarioEgreso } }))
   }
+  function toggleSala(salaId: string) {
+    setForm(prev => ({
+      ...prev,
+      salasIds: prev.salasIds.includes(salaId) 
+        ? prev.salasIds.filter(id => id !== salaId)
+        : [...prev.salasIds, salaId]
+    }))
+  }
 
   function openCreate() {
     setEditingDocente(null)
@@ -54,6 +63,7 @@ export default function DocentesPage() {
       nombre: d.nombre, apellido: d.apellido, email: d.email,
       telefono: d.telefono, dni: d.dni,
       turno: d.turno ?? DEFAULT_FORM.turno,
+      salasIds: d.salasIds ?? []
     })
     setError(null)
     setModalOpen(true)
@@ -218,28 +228,35 @@ export default function DocentesPage() {
             <input className="input" value={form.telefono} onChange={(e) => setField('telefono', e.target.value)} placeholder="+54 11 1234-5678" />
           </div>
 
-          {/* Turno */}
+          {/* Salas asignadas */}
           <div className="border-t border-gray-100 pt-4 space-y-3">
-            <p className="text-sm font-semibold text-gray-700">Turno asignado</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Turno</label>
-                <select className="input py-2 text-sm" value={form.turno.nombre}
-                  onChange={(e) => setTurnoField('nombre', e.target.value)}>
-                  {TURNOS.map((t) => <option key={t} value={t}>{TURNO_LABELS[t]}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Ingreso</label>
-                <input type="time" className="input py-2 text-sm" value={form.turno.horarioIngreso}
-                  onChange={(e) => setTurnoField('horarioIngreso', e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Egreso</label>
-                <input type="time" className="input py-2 text-sm" value={form.turno.horarioEgreso}
-                  onChange={(e) => setTurnoField('horarioEgreso', e.target.value)} />
-              </div>
+            <p className="text-sm font-semibold text-gray-700">Salas asignadas</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {salas.map((sala) => (
+                <label 
+                  key={sala.id} 
+                  className={`flex items-center gap-2 p-2 rounded-xl border text-sm transition-all cursor-pointer ${
+                    form.salasIds.includes(sala.id) 
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                      : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
+                  }`}
+                >
+                  <input 
+                    type="checkbox" 
+                    className="hidden" 
+                    checked={form.salasIds.includes(sala.id)}
+                    onChange={() => toggleSala(sala.id)}
+                  />
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                    form.salasIds.includes(sala.id) ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-300'
+                  }`}>
+                    {form.salasIds.includes(sala.id) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                  <span className="truncate">{sala.nombre}</span>
+                </label>
+              ))}
             </div>
+            {salas.length === 0 && <p className="text-xs text-gray-400">No hay salas creadas.</p>}
           </div>
 
           {!editingDocente && (
