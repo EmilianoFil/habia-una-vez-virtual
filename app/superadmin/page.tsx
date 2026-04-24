@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import { getUserClaims, logout } from '@/lib/auth'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
@@ -39,35 +39,27 @@ export default function SuperadminDashboardPage() {
   const [inviteMsg, setInviteMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
   useEffect(() => {
-    console.log('[Superadmin] Iniciando verificación de sesión...')
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (!user) {
-          console.log('[Superadmin] No hay usuario logueado. Redirigiendo...')
           router.replace('/superadmin/login')
           setChecking(false)
           return
         }
-        
-        console.log('[Superadmin] Usuario detectado:', user.email)
+
         const claims = await getUserClaims(user)
-        console.log('[Superadmin] Claims recibidos:', claims)
 
         if (claims?.role !== 'superadmin') {
-          console.log('[Superadmin] No es superadmin. Redirigiendo...')
           router.replace('/superadmin/login')
           setChecking(false)
           return
         }
 
         setUserName(user.displayName ?? user.email?.split('@')[0] ?? 'Superadmin')
-        
-        // Cargar tenants
-        console.log('[Superadmin] Cargando instituciones...')
-        const q = query(collection(db, 'tenants'))
+
+        const q = query(collection(db, 'tenants'), orderBy('config.name'), limit(200))
         const querySnapshot = await getDocs(q)
-        console.log('[Superadmin] Snapshot recibido, procesando...')
-        
+
         const loadedTenants: TenantRow[] = []
         querySnapshot.forEach((doc) => {
           const data = doc.data()
@@ -80,7 +72,6 @@ export default function SuperadminDashboardPage() {
           })
         })
         setTenants(loadedTenants.sort((a,b) => a.name.localeCompare(b.name)))
-        console.log('[Superadmin] Instituciones cargadas con éxito.')
       } catch (error) {
         console.error('[Superadmin] Error en verificación:', error)
       } finally {

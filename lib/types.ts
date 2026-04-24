@@ -20,6 +20,7 @@ export interface TenantConfig {
   configuracion?: {
     turnos?: TurnoConfig[]
     emailSettings?: EmailSettings
+    emailTemplateUrl?: string | null // Template HTML genérico para correos institucionales
   }
 }
 
@@ -69,6 +70,8 @@ export interface Sala {
   alumnoIds: string[]
   activa: boolean
   tenantId: string
+  logo?: string | null
+  emailTemplateUrl?: string | null // URL del template HTML para correos de esta sala
 }
 
 // --- Alumno ---
@@ -124,6 +127,7 @@ export interface HistorialSala {
 export interface Alumno {
   id: string
   tenantId: string
+  turnoId?: string
   datosPersonales: DatosPersonales
   datosMedicos: DatosMedicos
   contactosEmergencia: ContactoEmergencia[]

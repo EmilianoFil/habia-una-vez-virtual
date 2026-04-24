@@ -1,8 +1,102 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+
+    // ─── Helpers ───────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSuperadmin() {
+      return isAuth() && request.auth.token.role == 'superadmin';
+    }
+
+    function isAdmin(tenantId) {
+      return isAuth()
+        && request.auth.token.role == 'admin'
+        && request.auth.token.tenantId == tenantId;
+    }
+
+    function isDocente(tenantId) {
+      return isAuth()
+        && (request.auth.token.role == 'docente' || request.auth.token.role == 'administrativo')
+        && request.auth.token.tenantId == tenantId;
+    }
+
+    function isPadre(tenantId) {
+      return isAuth()
+        && request.auth.token.role == 'padre'
+        && request.auth.token.tenantId == tenantId;
+    }
+
+    function isStaff(tenantId) {
+      return isAdmin(tenantId) || isDocente(tenantId);
+    }
+
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isValidDocType() {
+      return request.resource.contentType.matches('image/.*')
+        || request.resource.contentType == 'application/pdf'
+        || request.resource.contentType.matches('application/.*document.*')
+        || request.resource.contentType.matches('application/.*sheet.*');
+    }
+
+    function isUnder10MB() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    function isUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // ─── Archivos de tenant ─────────────────────────────────────
+
+    match /tenants/{tenantId}/{allPaths=**} {
+      // Superadmin tiene acceso total
+      allow read, write: if isSuperadmin();
+
+      // Lectura: cualquier miembro del tenant puede leer archivos de su tenant
+      allow read: if isAuth() && request.auth.token.tenantId == tenantId;
+
+      // Logo e imágenes de configuración del tenant (solo admin)
+      allow write: if isAdmin(tenantId) && isValidImageType() && isUnder5MB();
+    }
+
+    // Templates HTML de email (solo admin, máx 512 KB)
+    match /tenants/{tenantId}/templates/{fileName} {
+      allow write: if isAdmin(tenantId)
+        && request.resource.contentType == 'text/html'
+        && request.resource.size < 512 * 1024;
+    }
+
+    match /tenants/{tenantId}/salas/{salaId}/email-template.html {
+      allow write: if isAdmin(tenantId)
+        && request.resource.contentType == 'text/html'
+        && request.resource.size < 512 * 1024;
+    }
+
+    match /tenants/{tenantId}/alumnos/{alumnoId}/{allPaths=**} {
+      // Staff puede subir fotos y documentos de alumnos
+      allow write: if isStaff(tenantId) && isValidDocType() && isUnder10MB();
+      // Padres pueden leer docs de sus hijos (read ya cubierto por la regla padre)
+    }
+
+    match /tenants/{tenantId}/salas/{salaId}/notas/{notaId}/{allPaths=**} {
+      // Staff puede subir adjuntos de notas
+      allow write: if isStaff(tenantId) && isValidDocType() && isUnder10MB();
+    }
+
+    match /tenants/{tenantId}/solicitudes/{solicitudId}/{allPaths=**} {
+      // Staff puede leer los archivos entregados
+      allow read: if isStaff(tenantId) || isSuperadmin();
+      // Padres pueden subir el archivo de entrega
+      allow write: if isPadre(tenantId) && isValidDocType() && isUnder10MB();
+      // Staff también puede escribir (correcciones, reemplazos)
+      allow write: if isStaff(tenantId) && isValidDocType() && isUnder10MB();
     }
   }
 }

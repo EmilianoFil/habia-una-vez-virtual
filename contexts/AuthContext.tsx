@@ -59,10 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const now = new Date().toISOString()
                 if (userClaims.role === 'padre') {
                   const tutorRef = doc(db, `tenants/${userClaims.tenantId}/tutores/${firebaseUser.uid}`)
-                  await updateDoc(tutorRef, { lastLogin: now }).catch(() => {})
+                  await updateDoc(tutorRef, { lastLogin: now }).catch((e) => {
+                    console.warn('[AuthContext] No se pudo registrar lastLogin del tutor:', e?.code)
+                  })
                 } else if (userClaims.role === 'admin' || userClaims.role === 'docente') {
                   const docenteRef = doc(db, `tenants/${userClaims.tenantId}/docentes/${firebaseUser.uid}`)
-                  await updateDoc(docenteRef, { 'acceso.lastLogin': now }).catch(() => {})
+                  await updateDoc(docenteRef, { 'acceso.lastLogin': now }).catch((e) => {
+                    console.warn('[AuthContext] No se pudo registrar lastLogin del docente:', e?.code)
+                  })
                 }
               }
             } catch (e) {

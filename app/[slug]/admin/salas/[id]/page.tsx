@@ -14,6 +14,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Modal } from '@/components/ui/Modal'
 import { updateSala } from '@/lib/services/salas.service'
+import { HtmlTemplateUpload } from '@/components/ui/HtmlTemplateUpload'
+import { PhotoUpload } from '@/components/ui/PhotoUpload'
 
 export default function SalaDetailPage() {
   const params = useParams()
@@ -28,6 +30,14 @@ export default function SalaDetailPage() {
 
   const [assignModal, setAssignModal] = useState(false)
   const [updating, setUpdating] = useState(false)
+
+  async function handleTemplateUpdate(url: string | null) {
+    await updateSala(tenant.id, salaId, { emailTemplateUrl: url })
+  }
+
+  async function handleLogoUpdate(url: string | null) {
+    await updateSala(tenant.id, salaId, { logo: url })
+  }
 
   const sala = salas.find(s => s.id === salaId)
   const docentesDeSala = docentes.filter(d => d.salasIds?.includes(salaId))
@@ -58,11 +68,13 @@ export default function SalaDetailPage() {
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{sala.nombre}</h1>
-            <TurnoBadge turno={tenant.configuracion?.turnos?.find(t => t.id === sala.turnoId)?.nombre ?? 'Sin turno'} />
+        {sala.logo && (
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-gray-100 shrink-0">
+            <Image src={sala.logo} alt={sala.nombre} width={56} height={56} className="w-full h-full object-cover" />
           </div>
+        )}
+        <div className="flex-1">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">{sala.nombre}</h1>
           <p className="text-gray-500 font-medium">{sala.nivel}</p>
         </div>
       </div>
@@ -164,35 +176,82 @@ export default function SalaDetailPage() {
             </div>
           </div>
 
-          {/* Información de la Sala */}
+          {/* Estado por Jornada */}
           <div className="card p-5 bg-indigo-50/30 border-indigo-100 space-y-4">
-            <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest">Estado de la Sala</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1.5">
-                  <span className="text-indigo-600/60 uppercase tracking-wider">Ocupación</span>
-                  <span className="text-indigo-900">{alumnos.length} / {sala.cupo}</span>
-                </div>
-                <div className="h-2.5 bg-indigo-100/50 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-indigo-500 rounded-full transition-all" 
-                    style={{ width: `${(alumnos.length / sala.cupo) * 100}%` }}
-                  />
-                </div>
-              </div>
+            <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest">Ocupación por Jornada</h3>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-indigo-400 uppercase">Disponibles</p>
-                  <p className="text-xl font-black text-indigo-900">{sala.cupo - alumnos.length}</p>
+            <div className="space-y-4">
+              {(tenant.configuracion?.turnos ?? []).length === 0 ? (
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-1.5">
+                    <span className="text-indigo-600/60 uppercase tracking-wider">Total</span>
+                    <span className="text-indigo-900">{alumnos.length} / {sala.cupo}</span>
+                  </div>
+                  <div className="h-2.5 bg-indigo-100/50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full transition-all"
+                      style={{ width: `${Math.min((alumnos.length / sala.cupo) * 100, 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-indigo-400 uppercase">Nivel</p>
-                  <p className="text-sm font-black text-indigo-900 leading-tight">{sala.nivel}</p>
+              ) : (
+                <div className="space-y-3">
+                  {(tenant.configuracion?.turnos ?? []).map((turno) => {
+                    const count = alumnos.filter(a => a.turnoId === turno.id).length
+                    const pct = Math.min((count / sala.cupo) * 100, 100)
+                    const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-indigo-500'
+                    return (
+                      <div key={turno.id}>
+                        <div className="flex justify-between text-xs font-bold mb-1">
+                          <span className="text-indigo-700 truncate max-w-[120px]">{turno.nombre}</span>
+                          <span className="text-indigo-900 shrink-0 ml-2">{count} / {sala.cupo}</span>
+                        </div>
+                        <div className="h-2 bg-indigo-100/50 rounded-full overflow-hidden">
+                          <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <p className="text-[10px] text-indigo-400 mt-0.5">{turno.inicio}–{turno.fin} · {sala.cupo - count} disponibles</p>
+                      </div>
+                    )
+                  })}
+                  <div className="border-t border-indigo-100 pt-3 flex justify-between items-center">
+                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider">Total sala</span>
+                    <span className="text-sm font-black text-indigo-900">{alumnos.length} / {sala.cupo}</span>
+                  </div>
                 </div>
+              )}
+
+              <div className="space-y-1 pt-1">
+                <p className="text-[10px] font-black text-indigo-400 uppercase">Nivel</p>
+                <p className="text-sm font-black text-indigo-900 leading-tight">{sala.nivel}</p>
               </div>
             </div>
+          </div>
+          {/* Logo de la sala */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-black text-gray-700 uppercase tracking-widest">Logo de la sala</h3>
+            <div className="flex items-center gap-4">
+              <PhotoUpload
+                value={sala.logo ?? null}
+                onChange={handleLogoUpdate}
+                storagePath={`tenants/${tenant.id}/salas/${salaId}/logo`}
+                size="lg"
+                shape="square"
+              />
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Se muestra en el encabezado de la sala y en la lista. Recomendado: imagen cuadrada.
+              </p>
+            </div>
+          </div>
+
+          {/* Template de email de la sala */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-black text-gray-700 uppercase tracking-widest">Template de Email</h3>
+            <HtmlTemplateUpload
+              value={sala.emailTemplateUrl ?? null}
+              onChange={handleTemplateUpdate}
+              storagePath={`tenants/${tenant.id}/salas/${salaId}/email-template.html`}
+              description="Reemplaza el template general para los correos de esta sala."
+            />
           </div>
         </div>
       </div>

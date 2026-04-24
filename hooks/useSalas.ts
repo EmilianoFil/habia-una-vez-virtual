@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, query, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Sala } from '@/lib/types'
 
@@ -13,8 +13,9 @@ export function useSalas(tenantId: string | null) {
   useEffect(() => {
     if (!tenantId) { setLoading(false); return }
 
+    const q = query(collection(db, `tenants/${tenantId}/salas`), limit(200))
     const unsub = onSnapshot(
-      collection(db, `tenants/${tenantId}/salas`),
+      q,
       (snap) => {
         const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Sala)
         setTodas(items.sort((a, b) => a.nombre.localeCompare(b.nombre)))

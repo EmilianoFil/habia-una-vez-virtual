@@ -37,6 +37,7 @@ export default function NuevoAlumnoPage() {
   const [dni, setDni] = useState('')
   const [foto, setFoto] = useState<string | null>(null)
   const [salaId, setSalaId] = useState('')
+  const [turnoId, setTurnoId] = useState('')
   const alumnoTempId = `temp-${Date.now()}`
 
   // Datos médicos
@@ -93,6 +94,7 @@ export default function NuevoAlumnoPage() {
         autorizados: autorizados.filter((a) => a.nombre.trim()),
         salaActualId: salaId || null,
         salaNombre,
+        turnoId: turnoId || undefined,
       })
       setSaved(true)
       setTimeout(() => router.push(`/${slug}/admin/alumnos`), 1500)
@@ -197,14 +199,25 @@ export default function NuevoAlumnoPage() {
                 </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sala asignada</label>
-              <select className="input" value={salaId} onChange={(e) => setSalaId(e.target.value)}>
-                <option value="">Sin sala por ahora</option>
-                {salas.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre} — {s.nivel}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Sala asignada</label>
+                <select className="input" value={salaId} onChange={(e) => setSalaId(e.target.value)}>
+                  <option value="">Sin sala por ahora</option>
+                  {salas.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nombre} — {s.nivel}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Jornada / Turno</label>
+                <select className="input" value={turnoId} onChange={(e) => setTurnoId(e.target.value)}>
+                  <option value="">Sin turno asignado</option>
+                  {tenant.configuracion?.turnos?.map((t) => (
+                    <option key={t.id} value={t.id}>{t.nombre} ({t.inicio}–{t.fin})</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}

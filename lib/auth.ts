@@ -7,7 +7,7 @@ import {
   User,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { UserRole } from '@/lib/types'
+import { UserRole, AccesoScope } from '@/lib/types'
 
 // ============================================================
 // Tipos de Auth
@@ -16,6 +16,7 @@ import { UserRole } from '@/lib/types'
 export interface UserClaims {
   role: UserRole
   tenantId?: string // undefined para superadmin
+  scope?: AccesoScope
   uid: string
   email: string | null
 }
@@ -55,6 +56,7 @@ export async function getUserClaims(user: User, forceRefresh = false): Promise<U
     return {
       role: claims.role as UserRole,
       tenantId: claims.tenantId as string | undefined,
+      scope: claims.scope as AccesoScope | undefined,
       uid: user.uid,
       email: user.email,
     }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, doc, onSnapshot } from 'firebase/firestore'
+import { collection, doc, onSnapshot, query, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Alumno } from '@/lib/types'
 
@@ -13,8 +13,9 @@ export function useAlumnos(tenantId: string | null, salaId?: string) {
   useEffect(() => {
     if (!tenantId) { setLoading(false); return }
 
+    const q = query(collection(db, `tenants/${tenantId}/alumnos`), limit(500))
     const unsub = onSnapshot(
-      collection(db, `tenants/${tenantId}/alumnos`),
+      q,
       (snap) => {
         let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Alumno)
         items = items.filter((a) => a.activo !== false)

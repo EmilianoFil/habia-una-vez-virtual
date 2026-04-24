@@ -18,7 +18,15 @@ export async function POST(request: NextRequest) {
     const isSuperadmin = callerToken.role === 'superadmin'
     const isAdmin = callerToken.role === 'admin'
 
-    const { uid, disabled, tenantId } = await request.json()
+    let uid: string, disabled: boolean, tenantId: string
+    try {
+      const body = await request.json()
+      uid = body?.uid
+      disabled = body?.disabled
+      tenantId = body?.tenantId
+    } catch {
+      return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
+    }
 
     if (!uid || disabled === undefined || !tenantId) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })

@@ -76,6 +76,18 @@ export default function PadreDashboardPage() {
             </div>
           )}
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Link href={`/${tenant.slug}/padre/mis-hijos`} className="card p-5 group hover:shadow-md transition-shadow md:col-span-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">👨‍👩‍👧</span>
+                <div>
+                  <h2 className="font-semibold text-gray-900 text-sm">Mis hijos</h2>
+                  <p className="text-xs text-gray-400">Editá contactos de emergencia y autorizados a retirar</p>
+                </div>
+              </div>
+              <ArrowRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
+            </Link>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link href={`/${tenant.slug}/padre/comunicaciones`} className="card p-5 group hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3 mb-4">

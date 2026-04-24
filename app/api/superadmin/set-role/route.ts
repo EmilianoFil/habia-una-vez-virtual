@@ -19,14 +19,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Procesar body
-    const { email, role, tenantId } = await request.json()
+    let email: string, role: string, tenantId: string | undefined
+    try {
+      const body = await request.json()
+      email = body?.email
+      role = body?.role
+      tenantId = body?.tenantId
+    } catch {
+      return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
+    }
 
     if (!email || !role) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
 
     const validRoles: UserRole[] = ['admin', 'docente', 'padre', 'superadmin']
-    if (!validRoles.includes(role)) {
+    if (!(validRoles as string[]).includes(role)) {
       return NextResponse.json({ error: 'Rol inválido' }, { status: 400 })
     }
 

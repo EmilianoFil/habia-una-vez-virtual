@@ -57,21 +57,24 @@ export function middleware(request: NextRequest) {
 
   let parsedClaims: { role: UserRole; tenantId?: string } | null = null
   if (claimsCookie) {
+    // __claims es seteada por el server tras verificar el ID token con Firebase Admin SDK.
+    // Es la fuente de verdad para decisiones de routing en el middleware.
     try { parsedClaims = JSON.parse(claimsCookie) } catch {}
-  } else if (sessionCookie && !isDev) {
-    // Firebase Hosting elimina todas las cookies excepto __session.
-    // Decodificamos el payload de la cookie JWT __session para leer los custom claims.
+  } else if (sessionCookie && isDev) {
+    // Fallback SOLO en desarrollo: decodificar payload del JWT sin verificar firma.
+    // En producción sin __claims, el middleware no puede determinar el rol
+    // y tratará la sesión como no autenticada (redirige al login).
+    // La seguridad real está en las API routes que usan Firebase Admin SDK.
     try {
       const payloadBase64 = sessionCookie.split('.')[1]
-      const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf-8')
+      const payloadJson = Buffer.from(payloadBase64, 'base64url').toString('utf-8')
       const decodedPayload = JSON.parse(payloadJson)
-      
       parsedClaims = {
         role: decodedPayload.role || null,
         tenantId: decodedPayload.tenantId || null
       }
     } catch (e) {
-      console.error('[Middleware] Error decodificando __session:', e)
+      console.error('[Middleware] Error decodificando __session (dev):', e)
     }
   }
 
