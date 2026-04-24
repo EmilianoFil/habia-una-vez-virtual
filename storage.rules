@@ -66,6 +66,19 @@ service firebase.storage {
       allow write: if isAdmin(tenantId) && isValidImageType() && isUnder5MB();
     }
 
+    // Templates HTML de email (solo admin, máx 512 KB)
+    match /tenants/{tenantId}/templates/{fileName} {
+      allow write: if isAdmin(tenantId)
+        && request.resource.contentType == 'text/html'
+        && request.resource.size < 512 * 1024;
+    }
+
+    match /tenants/{tenantId}/salas/{salaId}/email-template.html {
+      allow write: if isAdmin(tenantId)
+        && request.resource.contentType == 'text/html'
+        && request.resource.size < 512 * 1024;
+    }
+
     match /tenants/{tenantId}/alumnos/{alumnoId}/{allPaths=**} {
       // Staff puede subir fotos y documentos de alumnos
       allow write: if isStaff(tenantId) && isValidDocType() && isUnder10MB();
