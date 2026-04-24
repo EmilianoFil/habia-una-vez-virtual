@@ -13,6 +13,8 @@ import { auth } from '@/lib/firebase'
 import {
   createSessionCookie,
   logout as authLogout,
+  getUserClaims,
+  UserClaims,
 } from '@/lib/auth'
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
