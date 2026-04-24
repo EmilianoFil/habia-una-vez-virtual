@@ -39,22 +39,35 @@ export default function SuperadminDashboardPage() {
   const [inviteMsg, setInviteMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
   useEffect(() => {
+    console.log('[Superadmin] Iniciando verificación de sesión...')
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.replace('/superadmin/login')
-        return
-      }
-      const claims = await getUserClaims(user)
-      if (claims?.role !== 'superadmin') {
-        router.replace('/superadmin/login')
-        return
-      }
-      setUserName(user.displayName ?? user.email?.split('@')[0] ?? 'Superadmin')
-      
-      // Cargar tenants
       try {
+        if (!user) {
+          console.log('[Superadmin] No hay usuario logueado. Redirigiendo...')
+          router.replace('/superadmin/login')
+          setChecking(false)
+          return
+        }
+        
+        console.log('[Superadmin] Usuario detectado:', user.email)
+        const claims = await getUserClaims(user)
+        console.log('[Superadmin] Claims recibidos:', claims)
+
+        if (claims?.role !== 'superadmin') {
+          console.log('[Superadmin] No es superadmin. Redirigiendo...')
+          router.replace('/superadmin/login')
+          setChecking(false)
+          return
+        }
+
+        setUserName(user.displayName ?? user.email?.split('@')[0] ?? 'Superadmin')
+        
+        // Cargar tenants
+        console.log('[Superadmin] Cargando instituciones...')
         const q = query(collection(db, 'tenants'))
         const querySnapshot = await getDocs(q)
+        console.log('[Superadmin] Snapshot recibido, procesando...')
+        
         const loadedTenants: TenantRow[] = []
         querySnapshot.forEach((doc) => {
           const data = doc.data()
@@ -67,8 +80,9 @@ export default function SuperadminDashboardPage() {
           })
         })
         setTenants(loadedTenants.sort((a,b) => a.name.localeCompare(b.name)))
+        console.log('[Superadmin] Instituciones cargadas con éxito.')
       } catch (error) {
-        console.error('Error fetching tenants:', error)
+        console.error('[Superadmin] Error en verificación:', error)
       } finally {
         setChecking(false)
       }

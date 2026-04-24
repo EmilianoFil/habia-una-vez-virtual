@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { ArrowLeft, Building, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Building, Loader2, Save, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import { PhotoUpload } from '@/components/ui/PhotoUpload'
+import { updateTenantData } from '@/lib/services/tenant.service'
 
 export default function EditarTenantPage() {
   const router = useRouter()
@@ -19,8 +21,10 @@ export default function EditarTenantPage() {
   const [formData, setFormData] = useState({
     name: '',
     primaryColor: '#4f46e5',
-    secondaryColor: '#64748b'
+    secondaryColor: '#64748b',
+    logo: null as string | null
   })
+  const [tenantId, setTenantId] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadTenant() {
@@ -35,10 +39,12 @@ export default function EditarTenantPage() {
         }
 
         const data = snap.data()
+        setTenantId(snap.id)
         setFormData({
           name: data.config?.name || 'Sin nombre',
           primaryColor: data.config?.primaryColor || '#4f46e5',
-          secondaryColor: data.config?.secondaryColor || '#64748b'
+          secondaryColor: data.config?.secondaryColor || '#64748b',
+          logo: data.config?.logo || null
         })
       } catch (err) {
         console.error('Error al cargar tenant:', err)
@@ -65,11 +71,11 @@ export default function EditarTenantPage() {
 
       const tenantRef = doc(db, 'tenants', slug)
       
-      await updateDoc(tenantRef, {
-        'config.name': formData.name,
-        'config.primaryColor': formData.primaryColor,
-        'config.secondaryColor': formData.secondaryColor,
-        updatedAt: serverTimestamp()
+      await updateTenantData(tenantId!, {
+        name: formData.name,
+        primaryColor: formData.primaryColor,
+        secondaryColor: formData.secondaryColor,
+        logo: formData.logo
       })
 
       router.push('/superadmin')
@@ -110,6 +116,24 @@ export default function EditarTenantPage() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-6">
             
+            {/* Logo Section */}
+            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800">
+              <label className="text-sm font-semibold text-slate-300 mb-4 block">Logo de la Institución</label>
+              <div className="flex items-center gap-6">
+                <PhotoUpload 
+                  value={formData.logo}
+                  onChange={(url) => setFormData(prev => ({ ...prev, logo: url }))}
+                  storagePath={`tenants/${tenantId}/branding/logo`}
+                  label="Subir Logo"
+                />
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Este logo se usará en el sidebar y como favicon del tenant.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-300">Nombre de la Institución *</label>
               <input

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Save, Plus, Trash2, Clock, Users, Loader2, CheckCircle2, Mail, ShieldAlert } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useTenant } from '@/contexts/TenantContext'
 import { updateTenantConfig } from '@/lib/services/tenant.service'
 import { TurnoConfig, EmailSettings } from '@/lib/types'
@@ -18,6 +19,7 @@ const DEFAULT_TURNO: TurnoConfig = {
 }
 
 export default function ConfiguracionPage() {
+  const router = useRouter()
   const { tenant } = useTenant()
   const [turnos, setTurnos] = useState<TurnoConfig[]>(tenant.configuracion?.turnos ?? [])
   const [emailSettings, setEmailSettings] = useState<EmailSettings>(tenant.configuracion?.emailSettings ?? {
@@ -29,6 +31,7 @@ export default function ConfiguracionPage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [logoUpdating, setLogoUpdating] = useState(false)
 
   useEffect(() => {
     if (tenant.configuracion?.turnos) {
@@ -56,6 +59,7 @@ export default function ConfiguracionPage() {
     try {
       await updateTenantConfig(tenant.id, { turnos, emailSettings })
       setSuccess(true)
+      router.refresh() // Forzar re-fetch de datos del tenant en el Layout
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
       setError(err.message ?? 'Error al guardar la configuración')
@@ -65,11 +69,15 @@ export default function ConfiguracionPage() {
   }
 
   async function handleLogoUpdate(url: string | null) {
+    setLogoUpdating(true)
     try {
       await updateTenantData(tenant.id, { logo: url })
+      router.refresh()
     } catch (err: any) {
       console.error('Error al actualizar logo:', err)
       alert('No se pudo actualizar el logo: ' + err.message)
+    } finally {
+      setLogoUpdating(false)
     }
   }
 
@@ -88,7 +96,7 @@ export default function ConfiguracionPage() {
             descripcion="Subí el logo de tu jardín. Este se usará en el sidebar, las comunicaciones y como icono de la aplicación."
           />
           
-          <div className="mt-6 flex flex-col sm:flex-row items-center gap-6 p-6 bg-white rounded-2xl border border-amber-100/50">
+          <div className="mt-6 flex flex-col sm:flex-row items-center gap-6 p-6 bg-white rounded-2xl border border-amber-100/50 relative">
             <PhotoUpload 
               value={tenant.logo} 
               onChange={handleLogoUpdate}
@@ -96,7 +104,10 @@ export default function ConfiguracionPage() {
               label="Cambiar logo"
             />
             <div className="flex-1 space-y-2 text-center sm:text-left">
-              <p className="text-sm font-bold text-gray-900">Logo del Jardín</p>
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <p className="text-sm font-bold text-gray-900">Logo del Jardín</p>
+                {logoUpdating && <Loader2 size={14} className="animate-spin text-amber-500" />}
+              </div>
               <p className="text-xs text-gray-400 leading-relaxed max-w-sm">
                 Se recomienda usar una imagen cuadrada (1:1) con fondo transparente (.png).
                 Tamaño ideal: 512x512 px.
