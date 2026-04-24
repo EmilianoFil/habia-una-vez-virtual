@@ -33,6 +33,7 @@ export default function AdminCuadernoPage() {
     // Notificar por mail (background)
     fetch('/api/notifications/send-communication', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenantId: tenant.id, salaId, notaId: id })
     }).catch(err => console.error('[Notification] Error triggering email:', err))
   }

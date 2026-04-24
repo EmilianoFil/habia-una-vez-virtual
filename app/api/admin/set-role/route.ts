@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { sendWelcomeEmail } from '@/lib/services/email.service'
 
@@ -20,7 +21,16 @@ export async function POST(request: NextRequest) {
     const isAdmin = callerToken.role === 'admin'
 
     // 2. Procesar body
-    const { email, role, tenantId, scope } = await request.json()
+    let email: string, role: string, tenantId: string, scope: string | undefined
+    try {
+      const body = await request.json()
+      email = body?.email
+      role = body?.role
+      tenantId = body?.tenantId
+      scope = body?.scope
+    } catch {
+      return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
+    }
 
     if (!email || !role || !tenantId) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
@@ -50,7 +60,7 @@ export async function POST(request: NextRequest) {
     } catch (e: any) {
       if (e.code === 'auth/user-not-found') {
         // CREAR USUARIO si no existe (con password aleatorio)
-        const tempPassword = Math.random().toString(36).slice(-10) + 'A1!'
+        const tempPassword = randomBytes(12).toString('base64url') + 'A1!'
         userRecord = await adminAuth.createUser({
           email,
           password: tempPassword,

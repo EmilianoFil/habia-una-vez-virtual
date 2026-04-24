@@ -1,8 +1,133 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // ─── Helpers ───────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSuperadmin() {
+      return isAuth() && request.auth.token.role == 'superadmin';
+    }
+
+    function isAdmin(tenantId) {
+      return isAuth()
+        && request.auth.token.role == 'admin'
+        && request.auth.token.tenantId == tenantId;
+    }
+
+    function isDocente(tenantId) {
+      return isAuth()
+        && (request.auth.token.role == 'docente' || request.auth.token.role == 'administrativo')
+        && request.auth.token.tenantId == tenantId;
+    }
+
+    function isPadre(tenantId) {
+      return isAuth()
+        && request.auth.token.role == 'padre'
+        && request.auth.token.tenantId == tenantId;
+    }
+
+    function isStaff(tenantId) {
+      return isAdmin(tenantId) || isDocente(tenantId);
+    }
+
+    function belongsToTenant(tenantId) {
+      return isAuth() && request.auth.token.tenantId == tenantId;
+    }
+
+    // ─── Tenants ────────────────────────────────────────────────
+
+    match /tenants/{tenantId} {
+      // Cualquier miembro del tenant puede leer su config; superadmin puede leer todos
+      allow read: if isSuperadmin() || belongsToTenant(tenantId);
+      // Solo superadmin o admin del tenant pueden escribir
+      allow write: if isSuperadmin() || isAdmin(tenantId);
+
+      // ── Salas ──────────────────────────────────────────────
+
+      match /salas/{salaId} {
+        allow read: if isSuperadmin() || belongsToTenant(tenantId);
+        allow write: if isSuperadmin() || isAdmin(tenantId);
+
+        // ── Notas (cuaderno de comunicaciones) ─────────────
+
+        match /notas/{notaId} {
+          allow read: if isSuperadmin() || isStaff(tenantId) || isPadre(tenantId);
+          allow create: if isSuperadmin() || isStaff(tenantId);
+          // Admin puede editar cualquier nota; docente solo las propias.
+          // Padre solo puede tocar el campo acusesRecibo.
+          allow update: if isSuperadmin()
+            || isAdmin(tenantId)
+            || (isDocente(tenantId) && resource.data.autorId == request.auth.uid)
+            || (isPadre(tenantId)
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acusesRecibo']));
+          allow delete: if isSuperadmin() || isAdmin(tenantId);
+        }
+
+        // ── Asistencias ─────────────────────────────────────
+
+        match /asistencias/{fecha} {
+          allow read: if isSuperadmin() || belongsToTenant(tenantId);
+          allow write: if isSuperadmin() || isStaff(tenantId);
+        }
+      }
+
+      // ── Alumnos ────────────────────────────────────────────
+
+      match /alumnos/{alumnoId} {
+        allow read: if isSuperadmin() || isStaff(tenantId) || isPadre(tenantId);
+        allow write: if isSuperadmin() || isAdmin(tenantId);
+      }
+
+      // ── Docentes ───────────────────────────────────────────
+
+      match /docentes/{docenteId} {
+        allow read: if isSuperadmin() || isStaff(tenantId);
+        allow write: if isSuperadmin() || isAdmin(tenantId);
+      }
+
+      // ── Tutores (padres) ───────────────────────────────────
+
+      match /tutores/{tutorId} {
+        allow read: if isSuperadmin() || isStaff(tenantId)
+          || (isPadre(tenantId) && resource.data.uid == request.auth.uid);
+        allow create: if isSuperadmin() || isAdmin(tenantId);
+        allow update: if isSuperadmin() || isAdmin(tenantId)
+          || (isPadre(tenantId) && resource.data.uid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['lastLogin', 'telefono', 'nombre', 'apellido']));
+        allow delete: if isSuperadmin() || isAdmin(tenantId);
+      }
+
+      // ── Comunicaciones masivas ─────────────────────────────
+
+      match /comunicaciones/{comId} {
+        allow read: if isSuperadmin() || isStaff(tenantId);
+        allow write: if isSuperadmin() || isAdmin(tenantId);
+      }
+
+      // ── Eventos / Calendario ───────────────────────────────
+
+      match /eventos/{eventoId} {
+        allow read: if isSuperadmin() || belongsToTenant(tenantId);
+        allow write: if isSuperadmin() || isAdmin(tenantId);
+      }
+
+      // ── Solicitudes de archivos ────────────────────────────
+
+      match /solicitudesArchivo/{solicitudId} {
+        allow read: if isSuperadmin() || isStaff(tenantId) || isPadre(tenantId);
+        allow create: if isSuperadmin() || isStaff(tenantId);
+        allow update: if isSuperadmin() || isAdmin(tenantId)
+          || (isDocente(tenantId) && resource.data.creadaPorId == request.auth.uid)
+          || (isPadre(tenantId)
+              && request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['archivoUrl', 'archivoNombre', 'estado', 'entregadaEn']));
+        allow delete: if isSuperadmin() || isAdmin(tenantId);
+      }
     }
   }
 }

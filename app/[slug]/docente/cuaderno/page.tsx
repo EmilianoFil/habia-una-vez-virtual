@@ -15,11 +15,14 @@ import { EmptyState } from '@/components/ui/EmptyState'
 export default function DocenteCuadernoPage() {
   const { tenant } = useTenant()
   const { user, claims } = useAuth()
-  const { salas } = useSalas(tenant.id)
+  const { salas: todasLasSalas } = useSalas(tenant.id)
 
-  // Docente solo ve sus salas asignadas
-  // TODO: filtrar por claims.docenteId cuando esté disponible
-  // Por ahora muestra todas (el docente solo tiene acceso a /docente/* igual)
+  // Docentes con scope 'salas_propias' ven solo sus salas (uid en docenteIds).
+  // Docentes con scope 'institucion' (ej. administrativos) ven todas.
+  const salas = claims?.scope === 'institucion'
+    ? todasLasSalas
+    : todasLasSalas.filter((s) => s.docenteIds?.includes(user?.uid ?? ''))
+
   const [salaId, setSalaId] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -34,6 +37,7 @@ export default function DocenteCuadernoPage() {
     // Notificar por mail (background)
     fetch('/api/notifications/send-communication', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenantId: tenant.id, salaId: salaActiva, notaId: id })
     }).catch(err => console.error('[Notification] Error triggering email:', err))
   }

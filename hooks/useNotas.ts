@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { NotaCuaderno } from '@/lib/types'
 
@@ -13,17 +13,17 @@ export function useNotasDeSala(tenantId: string | null, salaId: string | null) {
   useEffect(() => {
     if (!tenantId || !salaId) { setLoading(false); return }
 
-    const unsub = onSnapshot(
+    const q = query(
       collection(db, `tenants/${tenantId}/salas/${salaId}/notas`),
+      orderBy('creadaEn', 'desc'),
+      limit(100)
+    )
+    const unsub = onSnapshot(
+      q,
       (snap) => {
         const items = snap.docs
           .map((d) => ({ id: d.id, ...d.data() }) as NotaCuaderno)
           .filter((n) => n.visible !== false)
-          .sort((a, b) => {
-            const ta = a.creadaEn?.toMillis?.() ?? 0
-            const tb = b.creadaEn?.toMillis?.() ?? 0
-            return tb - ta
-          })
         setNotas(items)
         setLoading(false)
       },

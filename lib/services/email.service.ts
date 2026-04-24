@@ -1,6 +1,23 @@
 import nodemailer from 'nodemailer'
 import { EmailSettings, NotaCuaderno } from '@/lib/types'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://habia-una-vez-virtual.web.app'
+
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function getTransporter(settings: EmailSettings) {
   return nodemailer.createTransport({
     service: settings.provider === 'gmail' ? 'gmail' : undefined,
@@ -69,8 +86,8 @@ export async function sendNoteEmail(
 
   const transporter = getTransporter(settings)
   
-  // Limpiar un poco el contenido HTML si viene de un editor
-  const preview = nota.contenido.replace(/<[^>]*>/g, '').slice(0, 150) + '...'
+  // Extraer texto plano del HTML para el preview del email
+  const preview = stripHtmlToText(nota.contenido).slice(0, 150) + '...'
 
   const htmlContent = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
@@ -84,7 +101,7 @@ export async function sendNoteEmail(
         <p style="color: #4b5563;">${preview}</p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://habia-una-vez-virtual.web.app/login" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+          <a href="${APP_URL}/login" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
             Ver cuaderno completo
           </a>
         </div>

@@ -17,7 +17,13 @@ function hasAdminCredentials(): boolean {
 // ============================================================
 export async function POST(request: NextRequest) {
   try {
-    const { idToken } = await request.json()
+    let idToken: string | undefined
+    try {
+      const body = await request.json()
+      idToken = body?.idToken
+    } catch {
+      return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
+    }
     if (!idToken) {
       return NextResponse.json({ error: 'Token requerido' }, { status: 400 })
     }
