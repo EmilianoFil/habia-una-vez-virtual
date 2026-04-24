@@ -8,12 +8,13 @@ import { TenantConfig } from '@/lib/types'
 export async function updateTenantConfig(tenantId: string, updates: Partial<TenantConfig['configuracion']>) {
   try {
     const tenantRef = doc(db, 'tenants', tenantId)
-    
-    // Usamos notación de puntos para actualizar solo el objeto configuracion
-    await updateDoc(tenantRef, {
-      'configuracion': updates,
-      updatedAt: serverTimestamp()
-    })
+
+    // Dot notation para hacer merge parcial sin pisar otros campos de configuracion
+    const firestoreUpdates: Record<string, any> = { updatedAt: serverTimestamp() }
+    for (const [k, v] of Object.entries(updates as Record<string, any>)) {
+      firestoreUpdates[`configuracion.${k}`] = v
+    }
+    await updateDoc(tenantRef, firestoreUpdates)
   } catch (error) {
     console.error('[TenantService] Error updating config:', error)
     throw error

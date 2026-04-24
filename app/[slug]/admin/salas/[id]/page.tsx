@@ -14,6 +14,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Modal } from '@/components/ui/Modal'
 import { updateSala } from '@/lib/services/salas.service'
+import { HtmlTemplateUpload } from '@/components/ui/HtmlTemplateUpload'
 
 export default function SalaDetailPage() {
   const params = useParams()
@@ -28,6 +29,10 @@ export default function SalaDetailPage() {
 
   const [assignModal, setAssignModal] = useState(false)
   const [updating, setUpdating] = useState(false)
+
+  async function handleTemplateUpdate(url: string | null) {
+    await updateSala(tenant.id, salaId, { emailTemplateUrl: url })
+  }
 
   const sala = salas.find(s => s.id === salaId)
   const docentesDeSala = docentes.filter(d => d.salasIds?.includes(salaId))
@@ -213,6 +218,16 @@ export default function SalaDetailPage() {
                 <p className="text-sm font-black text-indigo-900 leading-tight">{sala.nivel}</p>
               </div>
             </div>
+          </div>
+          {/* Template de email de la sala */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-black text-gray-700 uppercase tracking-widest">Template de Email</h3>
+            <HtmlTemplateUpload
+              value={sala.emailTemplateUrl ?? null}
+              onChange={handleTemplateUpdate}
+              storagePath={`tenants/${tenant.id}/salas/${salaId}/email-template.html`}
+              description="Reemplaza el template general para los correos de esta sala."
+            />
           </div>
         </div>
       </div>

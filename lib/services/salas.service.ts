@@ -22,7 +22,7 @@ export async function createSala(tenantId: string, data: CreateSalaData): Promis
 export async function updateSala(
   tenantId: string,
   salaId: string,
-  data: Partial<CreateSalaData>
+  data: Partial<CreateSalaData & { emailTemplateUrl: string | null }>
 ): Promise<void> {
   await updateDoc(doc(db, `tenants/${tenantId}/salas/${salaId}`), {
     ...data,

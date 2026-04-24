@@ -77,13 +77,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Envíos desactivados por configuración.' })
     }
 
-    // 2. Determinar destinatarios (alumnos)
+    // 2. Determinar destinatarios (alumnos) y obtener template de email
     let alumnosIds: string[] = []
+    let salaEmailTemplateUrl: string | null = null
+
+    const salaDoc = await adminDb.doc(`tenants/${tenantId}/salas/${salaId}`).get()
+    const salaData = salaDoc.data()
+    salaEmailTemplateUrl = salaData?.emailTemplateUrl ?? null
+
     if (notaData?.alumnosDestino && notaData.alumnosDestino.length > 0) {
       alumnosIds = notaData.alumnosDestino
     } else {
-      const salaDoc = await adminDb.doc(`tenants/${tenantId}/salas/${salaId}`).get()
-      alumnosIds = salaDoc.data()?.alumnoIds || []
+      alumnosIds = salaData?.alumnoIds || []
+    }
+
+    // Resolver template: sala > general > null (usa default hardcoded)
+    const generalTemplateUrl: string | null = tenantData?.configuracion?.emailTemplateUrl ?? null
+    const templateUrl = salaEmailTemplateUrl ?? generalTemplateUrl ?? null
+
+    let templateHtml: string | null = null
+    if (templateUrl) {
+      try {
+        const res = await fetch(templateUrl)
+        if (res.ok) templateHtml = await res.text()
+      } catch {
+        // Si falla la descarga del template, usa el default
+      }
     }
 
     if (alumnosIds.length === 0) return NextResponse.json({ success: true, message: 'No hay alumnos destino.' })
@@ -107,7 +126,8 @@ export async function POST(request: NextRequest) {
         settings,
         email,
         notaData as any,
-        tenantData?.config?.name || 'Había una vez'
+        tenantData?.config?.name || 'Había una vez',
+        templateHtml
       ))
     )
 

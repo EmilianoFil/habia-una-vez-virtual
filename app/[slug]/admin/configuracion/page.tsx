@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionHeader } from '@/components/ui/PageHeader'
 import { PhotoUpload } from '@/components/ui/PhotoUpload'
 import { updateTenantData } from '@/lib/services/tenant.service'
+import { HtmlTemplateUpload } from '@/components/ui/HtmlTemplateUpload'
 
 const DEFAULT_TURNO: TurnoConfig = {
   id: '',
@@ -22,6 +23,7 @@ export default function ConfiguracionPage() {
   const router = useRouter()
   const { tenant } = useTenant()
   const [turnos, setTurnos] = useState<TurnoConfig[]>(tenant.configuracion?.turnos ?? [])
+  const [emailTemplateUrl, setEmailTemplateUrl] = useState<string | null>(tenant.configuracion?.emailTemplateUrl ?? null)
   const [emailSettings, setEmailSettings] = useState<EmailSettings>(tenant.configuracion?.emailSettings ?? {
     enabled: false,
     provider: 'gmail',
@@ -57,7 +59,7 @@ export default function ConfiguracionPage() {
     setError(null)
     setSuccess(false)
     try {
-      await updateTenantConfig(tenant.id, { turnos, emailSettings })
+      await updateTenantConfig(tenant.id, { turnos, emailSettings, emailTemplateUrl })
       setSuccess(true)
       router.refresh() // Forzar re-fetch de datos del tenant en el Layout
       setTimeout(() => setSuccess(false), 3000)
@@ -65,6 +67,17 @@ export default function ConfiguracionPage() {
       setError(err.message ?? 'Error al guardar la configuración')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleEmailTemplateUpdate(url: string | null) {
+    setEmailTemplateUrl(url)
+    try {
+      await updateTenantConfig(tenant.id, { emailTemplateUrl: url })
+      router.refresh()
+    } catch (err: any) {
+      console.error('Error al actualizar template:', err)
+      alert('No se pudo guardar el template: ' + err.message)
     }
   }
 
@@ -113,6 +126,21 @@ export default function ConfiguracionPage() {
                 Tamaño ideal: 512x512 px.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Sección: Template de Email General */}
+        <div className="card p-6 border-violet-100 bg-violet-50/5">
+          <SectionHeader
+            titulo="Template de Email General"
+            descripcion="Subí un archivo HTML que se usará como base para todas las comunicaciones que no sean de una sala específica. Guardado automático al subir."
+          />
+          <div className="mt-6">
+            <HtmlTemplateUpload
+              value={emailTemplateUrl}
+              onChange={handleEmailTemplateUpdate}
+              storagePath={`tenants/${tenant.id}/templates/email-general.html`}
+            />
           </div>
         </div>
 
