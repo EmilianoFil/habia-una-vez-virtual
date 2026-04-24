@@ -4,17 +4,16 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Plus, Users, GraduationCap, Edit2, Trash2, Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import { useTenant } from '@/contexts/TenantContext'
 import { useSalas } from '@/hooks/useSalas'
 import { createSala, updateSala, deactivateSala } from '@/lib/services/salas.service'
 import { Sala } from '@/lib/types'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
-import { TurnoBadge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { TurnoConfig } from '@/lib/types'
 
-const DEFAULT_FORM = { nombre: '', turnoId: '', nivel: '', cupo: 20 }
+const DEFAULT_FORM = { nombre: '', nivel: '', cupo: 20 }
 
 export default function SalasPage() {
   const { tenant } = useTenant()
@@ -25,20 +24,20 @@ export default function SalasPage() {
   const configTurnos = tenant.configuracion?.turnos ?? []
   const [modalOpen, setModalOpen] = useState(false)
   const [editingSala, setEditingSala] = useState<Sala | null>(null)
-  const [form, setForm] = useState({ ...DEFAULT_FORM, turnoId: configTurnos[0]?.id ?? '' })
+  const [form, setForm] = useState(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function openCreate() {
     setEditingSala(null)
-    setForm({ ...DEFAULT_FORM, turnoId: configTurnos[0]?.id ?? '' })
+    setForm(DEFAULT_FORM)
     setError(null)
     setModalOpen(true)
   }
 
   function openEdit(sala: Sala) {
     setEditingSala(sala)
-    setForm({ nombre: sala.nombre, turnoId: sala.turnoId, nivel: sala.nivel, cupo: sala.cupo })
+    setForm({ nombre: sala.nombre, nivel: sala.nivel, cupo: sala.cupo })
     setError(null)
     setModalOpen(true)
   }
@@ -55,7 +54,7 @@ export default function SalasPage() {
       if (editingSala) {
         await updateSala(tenant.id, editingSala.id, form)
       } else {
-        await createSala(tenant.id, form)
+        await createSala(tenant.id, { ...form, turnoId: '' })
       }
       setModalOpen(false)
     } catch (err: any) {
@@ -106,14 +105,18 @@ export default function SalasPage() {
                 href={`/${slug}/admin/salas/${sala.id}`}
                 className="flex flex-col gap-4 group-hover:no-underline"
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-[var(--color-primary)] transition-colors">
+                <div className="flex items-start gap-3">
+                  {sala.logo && (
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-gray-100 shrink-0">
+                      <Image src={sala.logo} alt={sala.nombre} width={48} height={48} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-[var(--color-primary)] transition-colors truncate">
                       {sala.nombre}
                     </h3>
                     <p className="text-sm text-gray-500 mt-0.5">{sala.nivel}</p>
                   </div>
-                  <TurnoBadge turno={configTurnos.find(t => t.id === sala.turnoId)?.nombre ?? 'Sin turno'} />
                 </div>
 
                 {/* Stats */}
@@ -205,34 +208,16 @@ export default function SalasPage() {
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Turno *</label>
-              <select
-                value={form.turnoId}
-                onChange={(e) => setForm({ ...form, turnoId: e.target.value })}
-                className="input text-sm"
-              >
-                {configTurnos.length > 0 ? (
-                  configTurnos.map((t) => (
-                    <option key={t.id} value={t.id}>{t.nombre}</option>
-                  ))
-                ) : (
-                  <option value="">Configurá turnos primero</option>
-                )}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Cupo máx *</label>
-              <input
-                type="number"
-                value={form.cupo}
-                onChange={(e) => setForm({ ...form, cupo: Number(e.target.value) })}
-                min={1}
-                max={100}
-                className="input"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Cupo máx *</label>
+            <input
+              type="number"
+              value={form.cupo}
+              onChange={(e) => setForm({ ...form, cupo: Number(e.target.value) })}
+              min={1}
+              max={100}
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">

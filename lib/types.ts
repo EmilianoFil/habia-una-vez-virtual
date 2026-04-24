@@ -70,6 +70,7 @@ export interface Sala {
   alumnoIds: string[]
   activa: boolean
   tenantId: string
+  logo?: string | null
   emailTemplateUrl?: string | null // URL del template HTML para correos de esta sala
 }
 

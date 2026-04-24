@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { Modal } from '@/components/ui/Modal'
 import { updateSala } from '@/lib/services/salas.service'
 import { HtmlTemplateUpload } from '@/components/ui/HtmlTemplateUpload'
+import { PhotoUpload } from '@/components/ui/PhotoUpload'
 
 export default function SalaDetailPage() {
   const params = useParams()
@@ -32,6 +33,10 @@ export default function SalaDetailPage() {
 
   async function handleTemplateUpdate(url: string | null) {
     await updateSala(tenant.id, salaId, { emailTemplateUrl: url })
+  }
+
+  async function handleLogoUpdate(url: string | null) {
+    await updateSala(tenant.id, salaId, { logo: url })
   }
 
   const sala = salas.find(s => s.id === salaId)
@@ -63,11 +68,13 @@ export default function SalaDetailPage() {
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{sala.nombre}</h1>
-            <TurnoBadge turno={tenant.configuracion?.turnos?.find(t => t.id === sala.turnoId)?.nombre ?? 'Sin turno'} />
+        {sala.logo && (
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-gray-100 shrink-0">
+            <Image src={sala.logo} alt={sala.nombre} width={56} height={56} className="w-full h-full object-cover" />
           </div>
+        )}
+        <div className="flex-1">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">{sala.nombre}</h1>
           <p className="text-gray-500 font-medium">{sala.nivel}</p>
         </div>
       </div>
@@ -219,6 +226,23 @@ export default function SalaDetailPage() {
               </div>
             </div>
           </div>
+          {/* Logo de la sala */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-black text-gray-700 uppercase tracking-widest">Logo de la sala</h3>
+            <div className="flex items-center gap-4">
+              <PhotoUpload
+                value={sala.logo ?? null}
+                onChange={handleLogoUpdate}
+                storagePath={`tenants/${tenant.id}/salas/${salaId}/logo`}
+                size="lg"
+                shape="square"
+              />
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Se muestra en el encabezado de la sala y en la lista. Recomendado: imagen cuadrada.
+              </p>
+            </div>
+          </div>
+
           {/* Template de email de la sala */}
           <div className="card p-5 space-y-3">
             <h3 className="text-sm font-black text-gray-700 uppercase tracking-widest">Template de Email</h3>
