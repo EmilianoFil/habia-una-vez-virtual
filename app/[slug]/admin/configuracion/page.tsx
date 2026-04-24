@@ -64,12 +64,12 @@ export default function ConfiguracionPage() {
     }
   }
 
-  const handleLogoChange = async (url: string | null) => {
+  async function handleLogoUpdate(url: string | null) {
     try {
       await updateTenantData(tenant.id, { logo: url })
-      // No necesitamos setSuccess(true) aquí porque PhotoUpload ya da feedback
     } catch (err: any) {
-      alert('Error al actualizar el logo: ' + err.message)
+      console.error('Error al actualizar logo:', err)
+      alert('No se pudo actualizar el logo: ' + err.message)
     }
   }
 
@@ -90,9 +90,9 @@ export default function ConfiguracionPage() {
           
           <div className="mt-6 flex flex-col sm:flex-row items-center gap-6 p-6 bg-white rounded-2xl border border-amber-100/50">
             <PhotoUpload 
-              currentPhoto={tenant.logo} 
-              onPhotoChange={handleLogoChange}
-              folder={`tenants/${tenant.id}/branding`}
+              value={tenant.logo} 
+              onChange={handleLogoUpdate}
+              storagePath={`tenants/${tenant.id}/branding/logo`}
               label="Cambiar logo"
             />
             <div className="flex-1 space-y-2 text-center sm:text-left">
