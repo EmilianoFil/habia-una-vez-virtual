@@ -62,6 +62,7 @@ export async function getTenantBySlug(slug: string): Promise<TenantConfig | null
     return {
       id: doc.id,
       ...data.config,
+      configuracion: data.configuracion || {}
     } as TenantConfig
   } catch (error) {
     console.error('[Tenant] Error al buscar tenant:', error)

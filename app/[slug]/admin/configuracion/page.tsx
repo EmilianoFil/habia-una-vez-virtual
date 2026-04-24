@@ -256,6 +256,17 @@ export default function ConfiguracionPage() {
                     </p>
                   </div>
                 </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Guardar Configuración de Mail
+                  </button>
+                </div>
               </div>
             )}
           </div>
