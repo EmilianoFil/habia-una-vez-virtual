@@ -80,6 +80,11 @@ service cloud.firestore {
       match /alumnos/{alumnoId} {
         allow read: if isSuperadmin() || isStaff(tenantId) || isPadre(tenantId);
         allow write: if isSuperadmin() || isAdmin(tenantId);
+        // Padres pueden editar solo contactos y autorizados de sus propios hijos
+        allow update: if isPadre(tenantId)
+          && resource.data.tutorIds.hasAny([request.auth.uid])
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['contactosEmergencia', 'autorizados', 'actualizadoEn']);
       }
 
       // ── Docentes ───────────────────────────────────────────

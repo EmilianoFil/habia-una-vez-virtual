@@ -64,7 +64,8 @@ export default function LoginPage() {
       }
 
       await createSessionCookie(result.user)
-      router.replace(getRoleBasePath(slug, userClaims.role))
+      // Hard redirect: fuerza recarga completa para que el servidor lea la nueva cookie de sesión
+      window.location.href = getRoleBasePath(slug, userClaims.role)
     } catch (err: any) {
       console.error('[Login] Error:', err)
       setError(err?.message || getAuthErrorMessage(err?.code ?? ''))
@@ -97,7 +98,7 @@ export default function LoginPage() {
       }
 
       await createSessionCookie(result.user)
-      router.replace(getRoleBasePath(slug, userClaims.role))
+      window.location.href = getRoleBasePath(slug, userClaims.role)
     } catch (err: any) {
       console.error('[Login Google] Error:', err)
       setError(err?.message || getAuthErrorMessage(err?.code ?? ''))

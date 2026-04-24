@@ -23,7 +23,8 @@ export default function AlumnoDetailPage() {
 
   const { alumno, loading } = useAlumno(tenant.id, alumnoId)
   const { salas } = useSalas(tenant.id)
-  const { tutores } = useTutores(tenant.id, alumnoId)
+  // Sin filtro por alumnoId: necesitamos detectar tutores ya registrados en otros hijos
+  const { tutores } = useTutores(tenant.id)
   
   const [grantingAccess, setGrantingAccess] = useState<string | null>(null) // email del que se está procesando
   const [togglingUid, setTogglingUid] = useState<string | null>(null)
@@ -223,8 +224,10 @@ export default function AlumnoDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {alumno.contactosEmergencia?.filter(c => c.email).map((c, i) => {
               const tutor = tutores.find(t => t.email.toLowerCase() === c.email?.toLowerCase())
+              // Tres estados: sin cuenta / cuenta existente pero no vinculada a este hijo / vinculada
+              const isRegistered = !!tutor
+              const hasAccess = isRegistered && (tutor!.alumnoIds?.includes(alumnoId) ?? false)
               const isEnabled = tutor?.activo !== false
-              const hasAccess = !!tutor
               const isToggling = togglingUid === tutor?.uid
 
               return (
@@ -253,8 +256,9 @@ export default function AlumnoDetailPage() {
                   )}
 
                   <div className="flex gap-2">
-                    {!hasAccess ? (
-                      <button 
+                    {!isRegistered ? (
+                      // Sin cuenta: crear usuario + vincular
+                      <button
                         disabled={grantingAccess === c.email}
                         onClick={async () => {
                           if (!confirm(`¿Dar acceso a ${c.nombre} (${c.email}) como padre?`)) return
@@ -263,21 +267,11 @@ export default function AlumnoDetailPage() {
                             const res = await fetch('/api/admin/set-role', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ 
-                                email: c.email, 
-                                role: 'padre', 
-                                tenantId: tenant.id,
-                                scope: 'salas_propias' 
-                              })
+                              body: JSON.stringify({ email: c.email, role: 'padre', tenantId: tenant.id, scope: 'salas_propias' })
                             })
                             const data = await res.json()
                             if (!res.ok) throw new Error(data.error)
-                            
-                            await vincularTutorAlumno(tenant.id, alumnoId, data.uid, {
-                              nombre: c.nombre,
-                              email: c.email!
-                            })
-
+                            await vincularTutorAlumno(tenant.id, alumnoId, data.uid, { nombre: c.nombre, email: c.email! })
                             alert('Acceso concedido correctamente.')
                           } catch (err: any) {
                             alert('Error: ' + err.message)
@@ -290,6 +284,32 @@ export default function AlumnoDetailPage() {
                         {grantingAccess === c.email ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
                         {grantingAccess === c.email ? 'Procesando...' : 'Conceder acceso'}
                       </button>
+                    ) : !hasAccess ? (
+                      // Ya tiene cuenta (en otro hijo) pero no está vinculado a éste
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                          <Key size={10} />
+                          Ya tiene acceso al portal (otro hijo)
+                        </div>
+                        <button
+                          disabled={grantingAccess === c.email}
+                          onClick={async () => {
+                            setGrantingAccess(c.email || null)
+                            try {
+                              await vincularTutorAlumno(tenant.id, alumnoId, tutor!.uid, { nombre: c.nombre, email: c.email! })
+                              alert(`${c.nombre} ahora puede ver también a ${alumno.datosPersonales.nombre}.`)
+                            } catch (err: any) {
+                              alert('Error: ' + err.message)
+                            } finally {
+                              setGrantingAccess(null)
+                            }
+                          }}
+                          className="btn-primary py-2 text-xs w-full flex items-center justify-center gap-2"
+                        >
+                          {grantingAccess === c.email ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
+                          {grantingAccess === c.email ? 'Vinculando...' : 'Vincular a este alumno'}
+                        </button>
+                      </div>
                     ) : (
                       <button 
                         disabled={isToggling}
