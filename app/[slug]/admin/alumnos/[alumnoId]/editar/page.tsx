@@ -41,6 +41,7 @@ export default function EditarAlumnoPage() {
   const [dni, setDni] = useState('')
   const [foto, setFoto] = useState<string | null>(null)
   const [salaId, setSalaId] = useState('')
+  const [turnoId, setTurnoId] = useState('')
 
   // Datos médicos
   const [alergias, setAlergias] = useState('')
@@ -65,6 +66,7 @@ export default function EditarAlumnoPage() {
       setDni(alumno.datosPersonales.dni || '')
       setFoto(alumno.datosPersonales.foto)
       setSalaId(alumno.salaActualId || '')
+      setTurnoId(alumno.turnoId || '')
       
       setAlergias(alumno.datosMedicos.alergias || '')
       setMedicacion(alumno.datosMedicos.medicacionHabitual || '')
@@ -116,6 +118,7 @@ export default function EditarAlumnoPage() {
         contactosEmergencia: contactos.filter((c) => c.nombre.trim()),
         autorizados: autorizados.filter((a) => a.nombre.trim()),
         salaActualId: salaId || null,
+        turnoId: turnoId || '',
       })
       setSaved(true)
       setTimeout(() => router.push(`/${slug}/admin/alumnos/${alumnoId}`), 1500)
@@ -228,17 +231,31 @@ export default function EditarAlumnoPage() {
                 </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sala asignada</label>
-              <p className="text-[10px] text-amber-600 mb-2 font-bold uppercase tracking-widest">
-                Nota: El cambio de sala genera un registro en el historial.
-              </p>
-              <select className="input" value={salaId} onChange={(e) => setSalaId(e.target.value)}>
-                <option value="">Sin sala por ahora</option>
-                {salas.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre} — {s.nivel}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Sala asignada</label>
+                <p className="text-[10px] text-amber-600 mb-2 font-bold uppercase tracking-widest">
+                  Nota: El cambio de sala genera un registro en el historial.
+                </p>
+                <select className="input" value={salaId} onChange={(e) => setSalaId(e.target.value)}>
+                  <option value="">Sin sala por ahora</option>
+                  {salas.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nombre} — {s.nivel}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Jornada / Turno</label>
+                <p className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-widest">
+                  Turno configurado en la institución
+                </p>
+                <select className="input" value={turnoId} onChange={(e) => setTurnoId(e.target.value)}>
+                  <option value="">Sin turno asignado</option>
+                  {(tenant?.configuracion?.turnos ?? []).map((t) => (
+                    <option key={t.id} value={t.id}>{t.nombre} ({t.inicio}–{t.fin})</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}

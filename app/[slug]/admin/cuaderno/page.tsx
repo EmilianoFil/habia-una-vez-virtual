@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Loader2, BookOpen } from 'lucide-react'
+import { Plus, Loader2, BookOpen, CheckCircle, AlertCircle, Info } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSalas } from '@/hooks/useSalas'
@@ -19,6 +19,12 @@ export default function AdminCuadernoPage() {
 
   const [salaSeleccionada, setSalaSeleccionada] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [emailToast, setEmailToast] = useState<{ type: 'ok' | 'warn' | 'info'; msg: string } | null>(null)
+
+  function showToast(type: 'ok' | 'warn' | 'info', msg: string) {
+    setEmailToast({ type, msg })
+    setTimeout(() => setEmailToast(null), 5000)
+  }
 
   // Sala activa — usa la primera si no hay selección
   const salaId = salaSeleccionada ?? salas[0]?.id ?? null
@@ -29,13 +35,25 @@ export default function AdminCuadernoPage() {
   async function handleCreate(data: CreateNotaData) {
     if (!salaId) return
     const id = await createNota(tenant.id, salaId, data)
-    
-    // Notificar por mail (background)
-    fetch('/api/notifications/send-communication', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId: tenant.id, salaId, notaId: id })
-    }).catch(err => console.error('[Notification] Error triggering email:', err))
+
+    try {
+      const res = await fetch('/api/notifications/send-communication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: tenant.id, salaId, notaId: id })
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        showToast('warn', `Nota publicada. No se pudo enviar el mail: ${json.error ?? 'error desconocido'}`)
+      } else if (json.message) {
+        showToast('info', `Nota publicada. ${json.message}`)
+      } else {
+        const fails = json.failCount > 0 ? ` (${json.failCount} fallaron)` : ''
+        showToast(json.failCount > 0 ? 'warn' : 'ok', `Nota publicada. ${json.sentCount} mail${json.sentCount !== 1 ? 's' : ''} enviados${fails}.`)
+      }
+    } catch {
+      showToast('warn', 'Nota publicada, pero no se pudo verificar el envío de mails.')
+    }
   }
 
   async function handleToggleVisibilidad(notaId: string, visible: boolean) {
@@ -45,6 +63,18 @@ export default function AdminCuadernoPage() {
 
   return (
     <div className="p-6 lg:p-8 animate-fade-in">
+      {emailToast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-semibold max-w-sm transition-all ${
+          emailToast.type === 'ok' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
+          emailToast.type === 'warn' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+          'bg-blue-50 text-blue-800 border border-blue-200'
+        }`}>
+          {emailToast.type === 'ok' ? <CheckCircle size={18} className="shrink-0 text-emerald-500" /> :
+           emailToast.type === 'warn' ? <AlertCircle size={18} className="shrink-0 text-amber-500" /> :
+           <Info size={18} className="shrink-0 text-blue-500" />}
+          <span>{emailToast.msg}</span>
+        </div>
+      )}
       <PageHeader
         titulo="Cuaderno"
         descripcion="Comunicaciones por sala"

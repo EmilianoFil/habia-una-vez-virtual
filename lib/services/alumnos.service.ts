@@ -12,6 +12,7 @@ export interface CreateAlumnoData {
   autorizados: AutorizadoRetiro[]
   salaActualId: string | null
   salaNombre?: string
+  turnoId?: string
 }
 
 export async function createAlumno(
@@ -40,6 +41,7 @@ export async function createAlumno(
     autorizados: data.autorizados,
     tutorIds: [],
     salaActualId: data.salaActualId,
+    turnoId: data.turnoId ?? '',
     historialSalas,
     activo: true,
     tenantId,

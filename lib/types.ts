@@ -124,6 +124,7 @@ export interface HistorialSala {
 export interface Alumno {
   id: string
   tenantId: string
+  turnoId?: string
   datosPersonales: DatosPersonales
   datosMedicos: DatosMedicos
   contactosEmergencia: ContactoEmergencia[]
