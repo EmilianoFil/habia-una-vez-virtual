@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const validRoles: UserRole[] = ['admin', 'docente', 'padre', 'superadmin']
-    if (!validRoles.includes(role)) {
+    if (!(validRoles as string[]).includes(role)) {
       return NextResponse.json({ error: 'Rol inválido' }, { status: 400 })
     }
 
