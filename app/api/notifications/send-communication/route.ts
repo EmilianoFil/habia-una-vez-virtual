@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     if (!notaDoc.exists) return NextResponse.json({ error: 'Nota no encontrada' }, { status: 404 })
     const notaData = notaDoc.data()
     const tenantData = tenantDoc.data()
-    const settings = tenantData?.config?.configuracion?.emailSettings
+    const settings = tenantData?.configuracion?.emailSettings
 
     if (!settings?.enabled) {
       return NextResponse.json({ success: true, message: 'Envíos desactivados por configuración.' })
