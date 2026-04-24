@@ -136,7 +136,7 @@ export default function AlumnoDetailPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-bold text-gray-900">{c.nombre}</p>
-                      <p className="text-xs text-gray-400">{c.parentesco}</p>
+                      <p className="text-xs text-gray-400">{c.relacion}</p>
                     </div>
                     {c.telefono && (
                       <a href={`tel:${c.telefono}`} className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors">
