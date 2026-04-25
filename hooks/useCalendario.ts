@@ -11,7 +11,9 @@ export function useEventos(tenantId: string | null, salaIdFilter?: string | null
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!tenantId) { setLoading(false); return }
+    if (!tenantId) { setEventos([]); setLoading(false); return }
+    setEventos([])
+    setLoading(true)
 
     // Traemos todos los eventos (ordenados por fecha). En este caso podríamos filtrar solo el año actual,
     // pero al ser un MVP, traerlos ordenados escala bien al principio.

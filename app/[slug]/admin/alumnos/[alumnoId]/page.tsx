@@ -1,16 +1,18 @@
 'use client'
 
-import { ArrowLeft, Phone, Heart, Users, Shield, Loader2, BookOpen, Mail, Key, Edit2, FileText, Calendar } from 'lucide-react'
+import { ArrowLeft, Phone, Heart, Users, Shield, Loader2, BookOpen, Mail, Key, Edit2, FileText, Calendar, UserX, AlertTriangle } from 'lucide-react'
+import { SkeletonCard } from '@/components/ui/Skeleton'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAlumno } from '@/hooks/useAlumnos'
 import { useSalas } from '@/hooks/useSalas'
 import { formatFecha, calcularEdadDetalle, getIniciales, formatRelativo } from '@/lib/utils'
-import { vincularTutorAlumno } from '@/lib/services/alumnos.service'
+import { vincularTutorAlumno, darDeBajaAlumno } from '@/lib/services/alumnos.service'
 import { TurnoBadge } from '@/components/ui/Badge'
 import { useState } from 'react'
 import { useTutores } from '@/hooks/useTutores'
+import { Modal } from '@/components/ui/Modal'
 import { db } from '@/lib/firebase'
 import { doc, updateDoc } from 'firebase/firestore'
 
@@ -23,16 +25,60 @@ export default function AlumnoDetailPage() {
 
   const { alumno, loading } = useAlumno(tenant.id, alumnoId)
   const { salas } = useSalas(tenant.id)
-  // Sin filtro por alumnoId: necesitamos detectar tutores ya registrados en otros hijos
   const { tutores } = useTutores(tenant.id)
-  
-  const [grantingAccess, setGrantingAccess] = useState<string | null>(null) // email del que se está procesando
+
+  const [grantingAccess, setGrantingAccess] = useState<string | null>(null)
   const [togglingUid, setTogglingUid] = useState<string | null>(null)
+
+  // Baja
+  const [bajaModal, setBajaModal] = useState(false)
+  const [bajaMotivo, setBajaMotivo] = useState('')
+  const [bajaDeshabilitarTutores, setBajaDeshabilitarTutores] = useState(true)
+  const [bajaSaving, setBajaSaving] = useState(false)
+
+  async function handleDarDeBaja() {
+    if (!bajaMotivo.trim()) return
+    setBajaSaving(true)
+    try {
+      await darDeBajaAlumno(tenant.id, alumnoId, {
+        motivo: bajaMotivo.trim(),
+        salaActualId: alumno?.salaActualId ?? null,
+      })
+
+      // Deshabilitar tutores si se solicitó
+      if (bajaDeshabilitarTutores && alumno) {
+        const tutoresDelAlumno = tutores.filter(t => alumno.tutorIds?.includes(t.uid))
+        await Promise.allSettled(
+          tutoresDelAlumno.map(async t => {
+            await fetch('/api/admin/toggle-user-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: t.uid, disabled: true, tenantId: tenant.id }),
+            })
+            await updateDoc(doc(db, `tenants/${tenant.id}/tutores/${t.uid}`), { activo: false })
+          })
+        )
+      }
+
+      setBajaModal(false)
+      router.push(`/${slug}/admin/alumnos`)
+    } catch (err: any) {
+      alert('Error al dar de baja: ' + err.message)
+    } finally {
+      setBajaSaving(false)
+    }
+  }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 size={28} className="animate-spin text-gray-300" />
+      <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
+        <SkeletonCard lines={3} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={3} />
+        </div>
       </div>
     )
   }
@@ -54,11 +100,23 @@ export default function AlumnoDetailPage() {
 
   return (
     <div className="p-6 lg:p-8 animate-fade-in max-w-4xl mx-auto pb-20">
+
+      {/* Banner de baja */}
+      {alumno.activo === false && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
+          <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-red-800 text-sm">Alumno dado de baja</p>
+            {alumno.motivoBaja && <p className="text-xs text-red-600 mt-0.5">Motivo: {alumno.motivoBaja}</p>}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-6 mb-8">
-        <div 
+        <div
           className="w-20 h-20 rounded-3xl flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-indigo-100"
-          style={{ backgroundColor: 'var(--color-primary)' }}
+          style={{ backgroundColor: alumno.activo === false ? '#9ca3af' : 'var(--color-primary)' }}
         >
           {iniciales}
         </div>
@@ -79,12 +137,22 @@ export default function AlumnoDetailPage() {
             </div>
           )}
         </div>
-        <Link 
-          href={`/${slug}/admin/alumnos/${alumnoId}/editar`}
-          className="btn-primary self-start flex items-center gap-2"
-        >
-          <Edit2 size={16} /> Editar
-        </Link>
+        <div className="flex flex-col gap-2 self-start">
+          <Link
+            href={`/${slug}/admin/alumnos/${alumnoId}/editar`}
+            className="btn-primary flex items-center gap-2 text-sm"
+          >
+            <Edit2 size={15} /> Editar
+          </Link>
+          {alumno.activo !== false && (
+            <button
+              onClick={() => { setBajaMotivo(''); setBajaDeshabilitarTutores(true); setBajaModal(true) }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-xs font-semibold transition-colors"
+            >
+              <UserX size={13} /> Dar de baja
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -359,6 +427,64 @@ export default function AlumnoDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Modal de baja */}
+      <Modal
+        open={bajaModal}
+        onClose={() => !bajaSaving && setBajaModal(false)}
+        title={`Dar de baja a ${dp?.nombre}`}
+        footer={
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setBajaModal(false)} disabled={bajaSaving} className="btn-secondary px-4 py-2">
+              Cancelar
+            </button>
+            <button
+              onClick={handleDarDeBaja}
+              disabled={bajaSaving || !bajaMotivo.trim()}
+              className="px-5 py-2 rounded-xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 disabled:opacity-50 flex items-center gap-2 transition-colors"
+            >
+              {bajaSaving ? <Loader2 size={14} className="animate-spin" /> : <UserX size={14} />}
+              {bajaSaving ? 'Procesando...' : 'Confirmar baja'}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-red-50 rounded-xl">
+            <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">
+              El alumno quedará inactivo, se lo quitará de su sala actual y el motivo quedará registrado en el historial.
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Motivo de baja *</label>
+            <textarea
+              value={bajaMotivo}
+              onChange={e => setBajaMotivo(e.target.value)}
+              placeholder="Ej: Cambio de institución, mudanza, etc."
+              className="input min-h-[80px] resize-none"
+              disabled={bajaSaving}
+            />
+          </div>
+          {alumno.tutorIds && alumno.tutorIds.length > 0 && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bajaDeshabilitarTutores}
+                onChange={e => setBajaDeshabilitarTutores(e.target.checked)}
+                className="mt-0.5 accent-red-500"
+                disabled={bajaSaving}
+              />
+              <span className="text-sm text-gray-700">
+                Deshabilitar el acceso de los familiares vinculados a {dp?.nombre}
+                <span className="block text-xs text-gray-400 mt-0.5">
+                  Si tienen otros hijos en la institución, perderán acceso también.
+                </span>
+              </span>
+            </label>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, Plus, Trash2, Clock, Users, Loader2, CheckCircle2, Mail, ShieldAlert } from 'lucide-react'
+import { Save, Plus, Trash2, Clock, Users, Loader2, CheckCircle2, Mail, ShieldAlert, MessageSquarePlus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useTenant } from '@/contexts/TenantContext'
 import { updateTenantConfig } from '@/lib/services/tenant.service'
@@ -24,6 +24,7 @@ export default function ConfiguracionPage() {
   const { tenant } = useTenant()
   const [turnos, setTurnos] = useState<TurnoConfig[]>(tenant.configuracion?.turnos ?? [])
   const [emailTemplateUrl, setEmailTemplateUrl] = useState<string | null>(tenant.configuracion?.emailTemplateUrl ?? null)
+  const [permitirNotasDePadres, setPermitirNotasDePadres] = useState<boolean>(tenant.configuracion?.permitirNotasDePadres ?? false)
   const [emailSettings, setEmailSettings] = useState<EmailSettings>(tenant.configuracion?.emailSettings ?? {
     enabled: false,
     provider: 'gmail',
@@ -59,7 +60,7 @@ export default function ConfiguracionPage() {
     setError(null)
     setSuccess(false)
     try {
-      await updateTenantConfig(tenant.id, { turnos, emailSettings, emailTemplateUrl })
+      await updateTenantConfig(tenant.id, { turnos, emailSettings, emailTemplateUrl, permitirNotasDePadres })
       setSuccess(true)
       router.refresh() // Forzar re-fetch de datos del tenant en el Layout
       setTimeout(() => setSuccess(false), 3000)
@@ -141,6 +142,33 @@ export default function ConfiguracionPage() {
               onChange={handleEmailTemplateUpdate}
               storagePath={`tenants/${tenant.id}/templates/email-general.html`}
             />
+          </div>
+        </div>
+
+        {/* Sección: Funcionalidades del Cuaderno */}
+        <div className="card p-6 border-emerald-100 bg-emerald-50/5">
+          <SectionHeader
+            titulo="Cuaderno de Comunicaciones"
+            descripcion="Configurá qué pueden hacer los familiares en el cuaderno digital."
+          />
+          <div className="mt-6">
+            <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-emerald-100">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${permitirNotasDePadres ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                  <MessageSquarePlus size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Permitir notas de familiares</p>
+                  <p className="text-xs text-gray-500">Los padres podrán enviar mensajes a la sala o administración desde el cuaderno.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPermitirNotasDePadres(!permitirNotasDePadres)}
+                className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${permitirNotasDePadres ? 'bg-emerald-500' : 'bg-gray-200'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${permitirNotasDePadres ? 'left-7' : 'left-1'}`} />
+              </button>
+            </div>
           </div>
         </div>
 

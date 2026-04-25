@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '@/lib/firebase'
-import { NotaCuaderno, TipoNota, AcuseRecibo, NotaAdjunto } from '@/lib/types'
+import { NotaCuaderno, TipoNota, AcuseRecibo, NotaAdjunto, Respuesta } from '@/lib/types'
 
 // ============================================================
 // Config visual por tipo de nota — fuente única de verdad
@@ -66,7 +66,7 @@ export interface CreateNotaData {
   files: File[]
   autorId: string
   autorNombre: string
-  autorRol: 'admin' | 'docente'
+  autorRol: 'admin' | 'docente' | 'padre'
   alumnosDestino?: string[]
 }
 
@@ -126,6 +126,22 @@ export async function acusarRecibo(
   await updateDoc(
     doc(db, `tenants/${tenantId}/salas/${salaId}/notas/${notaId}`),
     { acusesRecibo: arrayUnion(acuse) }
+  )
+}
+
+// ============================================================
+// Respuestas en notas
+// ============================================================
+
+export async function addRespuesta(
+  tenantId: string,
+  salaId: string,
+  notaId: string,
+  respuesta: Respuesta
+): Promise<void> {
+  await updateDoc(
+    doc(db, `tenants/${tenantId}/salas/${salaId}/notas/${notaId}`),
+    { respuestas: arrayUnion(respuesta) }
   )
 }
 

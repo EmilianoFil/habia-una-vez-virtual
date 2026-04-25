@@ -56,14 +56,18 @@ service cloud.firestore {
 
         match /notas/{notaId} {
           allow read: if isSuperadmin() || isStaff(tenantId) || isPadre(tenantId);
-          allow create: if isSuperadmin() || isStaff(tenantId);
-          // Admin puede editar cualquier nota; docente solo las propias.
-          // Padre solo puede tocar el campo acusesRecibo.
+          // Staff siempre puede crear; padre puede crear (la UI controla el feature flag)
+          allow create: if isSuperadmin() || isStaff(tenantId) || isPadre(tenantId);
+          // Admin puede editar cualquier nota; docente edita las propias o agrega respuestas.
+          // Padre solo puede tocar acusesRecibo y respuestas.
           allow update: if isSuperadmin()
             || isAdmin(tenantId)
             || (isDocente(tenantId) && resource.data.autorId == request.auth.uid)
+            || (isDocente(tenantId)
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['respuestas']))
             || (isPadre(tenantId)
-                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acusesRecibo']));
+                && request.resource.data.diff(resource.data).affectedKeys()
+                    .hasOnly(['acusesRecibo', 'respuestas']));
           allow delete: if isSuperadmin() || isAdmin(tenantId);
         }
 
@@ -114,6 +118,13 @@ service cloud.firestore {
         allow write: if isSuperadmin() || isAdmin(tenantId);
       }
 
+      // ── Comunicados institucionales (broadcast) ─────────────
+
+      match /comunicados/{comId} {
+        allow read: if isSuperadmin() || isAdmin(tenantId);
+        allow write: if isSuperadmin() || isAdmin(tenantId);
+      }
+
       // ── Eventos / Calendario ───────────────────────────────
 
       match /eventos/{eventoId} {
@@ -123,7 +134,7 @@ service cloud.firestore {
 
       // ── Solicitudes de archivos ────────────────────────────
 
-      match /solicitudesArchivo/{solicitudId} {
+      match /solicitudes/{solicitudId} {
         allow read: if isSuperadmin() || isStaff(tenantId) || isPadre(tenantId);
         allow create: if isSuperadmin() || isStaff(tenantId);
         allow update: if isSuperadmin() || isAdmin(tenantId)

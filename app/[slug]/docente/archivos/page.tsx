@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { FileUp, Loader2, Search, Filter, CheckCircle2, Clock, Download, XCircle } from 'lucide-react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSalas } from '@/hooks/useSalas'
@@ -48,7 +49,7 @@ export default function DocenteArchivosPage() {
       />
 
       {salasLoading ? (
-        <div className="flex justify-center py-20"><Loader2 size={24} className="animate-spin text-gray-300" /></div>
+        <SkeletonList count={3} />
       ) : salas.length === 0 ? (
         <EmptyState
           icon="📂"

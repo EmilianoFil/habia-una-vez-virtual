@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { FileUp, Loader2, CheckCircle2, Clock, Upload, FileText } from 'lucide-react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAlumnos } from '@/hooks/useAlumnos'
@@ -99,7 +100,7 @@ export default function PadreArchivosPage() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 size={24} className="animate-spin text-gray-300" /></div>
+        <SkeletonList count={3} />
       ) : solicitudes.length === 0 ? (
         <EmptyState
           icon="✨"

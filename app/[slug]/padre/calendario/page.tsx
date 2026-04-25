@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { CalendarHeart, Loader2, Users, HelpCircle } from 'lucide-react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEventos } from '@/hooks/useCalendario'
@@ -73,9 +74,7 @@ export default function PadreCalendarioPage() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
-        </div>
+        <SkeletonList count={4} />
       ) : eventosFuturos.length === 0 && eventosPasados.length === 0 ? (
         <EmptyState
           icon="📅"

@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { Plus, Search, Filter, Loader2 } from 'lucide-react'
+import { Plus, Search, Filter } from 'lucide-react'
+import { SkeletonGrid } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAlumnos } from '@/hooks/useAlumnos'
 import { useSalas } from '@/hooks/useSalas'
@@ -104,9 +105,7 @@ export default function AlumnosPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={28} className="animate-spin text-gray-300" />
-        </div>
+        <SkeletonGrid count={6} />
       ) : alumnos.length === 0 ? (
         <EmptyState
           icon="🎒"

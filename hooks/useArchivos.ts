@@ -20,6 +20,9 @@ export function useSolicitudes(tenantId: string | null, salaId?: string | null, 
     // o filtramos localmente si es necesario. (En procucción real a escala -> armar Composite Indexes)
     // Para simplificar, obtenemos los documentos en tiempo real y filtramos en frontend.
     
+    setSolicitudes([])
+    setLoading(true)
+
     const unsub = onSnapshot(
       collection(db, `tenants/${tenantId}/solicitudes`),
       (snap) => {

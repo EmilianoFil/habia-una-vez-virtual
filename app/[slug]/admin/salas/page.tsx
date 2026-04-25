@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { Plus, Users, GraduationCap, Edit2, Trash2, Loader2 } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { Plus, Users, GraduationCap, Trash2, Loader2, ArrowRight } from 'lucide-react'
+import { SkeletonGrid } from '@/components/ui/Skeleton'
 import Image from 'next/image'
 import { useTenant } from '@/contexts/TenantContext'
 import { useSalas } from '@/hooks/useSalas'
-import { createSala, updateSala, deactivateSala } from '@/lib/services/salas.service'
+import { createSala, deactivateSala } from '@/lib/services/salas.service'
 import { Sala } from '@/lib/types'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
@@ -18,26 +19,17 @@ const DEFAULT_FORM = { nombre: '', nivel: '', cupo: 20 }
 export default function SalasPage() {
   const { tenant } = useTenant()
   const params = useParams()
+  const router = useRouter()
   const slug = params.slug as string
   const { salas, loading } = useSalas(tenant.id)
 
-  const configTurnos = tenant.configuracion?.turnos ?? []
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingSala, setEditingSala] = useState<Sala | null>(null)
   const [form, setForm] = useState(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function openCreate() {
-    setEditingSala(null)
     setForm(DEFAULT_FORM)
-    setError(null)
-    setModalOpen(true)
-  }
-
-  function openEdit(sala: Sala) {
-    setEditingSala(sala)
-    setForm({ nombre: sala.nombre, nivel: sala.nivel, cupo: sala.cupo })
     setError(null)
     setModalOpen(true)
   }
@@ -51,12 +43,9 @@ export default function SalasPage() {
     setSaving(true)
     setError(null)
     try {
-      if (editingSala) {
-        await updateSala(tenant.id, editingSala.id, form)
-      } else {
-        await createSala(tenant.id, { ...form, turnoId: '' })
-      }
+      const id = await createSala(tenant.id, { ...form, turnoId: '' })
       setModalOpen(false)
+      router.push(`/${slug}/admin/salas/${id}`)
     } catch (err: any) {
       setError(err.message ?? 'Error al guardar')
     } finally {
@@ -69,10 +58,6 @@ export default function SalasPage() {
     await deactivateSala(tenant.id, sala.id)
   }
 
-  const turnoLabels: Record<string, string> = {
-    mañana: 'Mañana', tarde: 'Tarde', vespertino: 'Vespertino', completo: 'Completo'
-  }
-
   return (
     <div className="p-6 lg:p-8 animate-fade-in">
       <PageHeader
@@ -82,9 +67,7 @@ export default function SalasPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={28} className="animate-spin text-gray-300" />
-        </div>
+        <SkeletonGrid count={6} />
       ) : salas.length === 0 ? (
         <EmptyState
           icon="🏫"
@@ -154,12 +137,12 @@ export default function SalasPage() {
 
               {/* Actions */}
               <div className="flex gap-2 pt-1 border-t border-gray-100">
-                <button
-                  onClick={() => openEdit(sala)}
-                  className="btn-secondary flex-1 py-2 text-xs"
+                <Link
+                  href={`/${slug}/admin/salas/${sala.id}`}
+                  className="btn-secondary flex-1 py-2 text-xs flex items-center justify-center gap-1.5"
                 >
-                  <Edit2 size={13} /> Editar
-                </button>
+                  <ArrowRight size={13} /> Ver y editar
+                </Link>
                 <button
                   onClick={() => handleDeactivate(sala)}
                   className="px-3 py-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-xs font-semibold transition-colors flex items-center gap-1"
@@ -176,15 +159,15 @@ export default function SalasPage() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingSala ? `Editar: ${editingSala.nombre}` : 'Nueva sala'}
+        title="Nueva sala"
         footer={
           <div className="flex gap-3 justify-end">
             <button onClick={() => setModalOpen(false)} className="btn-secondary px-4 py-2">
               Cancelar
             </button>
-            <button onClick={handleSubmit} disabled={saving} className="btn-primary px-5 py-2">
+            <button onClick={handleSubmit} disabled={saving} className="btn-primary px-5 py-2 flex items-center gap-2">
               {saving && <Loader2 size={15} className="animate-spin" />}
-              {editingSala ? 'Guardar cambios' : 'Crear sala'}
+              Crear sala
             </button>
           </div>
         }

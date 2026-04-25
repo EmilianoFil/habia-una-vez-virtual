@@ -42,7 +42,8 @@ export default function SuperadminLoginPage() {
 
     try {
       const result = await signInWithEmailAndPassword(auth, email, password)
-      const claims = await getUserClaims(result.user)
+      // Forzar refresh para obtener los claims más recientes del servidor
+      const claims = await getUserClaims(result.user, true)
 
       if (claims?.role !== 'superadmin') {
         setError('No tenés permisos de superadmin.')

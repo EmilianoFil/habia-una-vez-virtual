@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, Image, Download, CheckCircle2, ChevronDown, ChevronUp, Eye, EyeOff, Loader2 } from 'lucide-react'
-import { NotaCuaderno } from '@/lib/types'
+import { FileText, Image, Download, CheckCircle2, ChevronDown, ChevronUp, Eye, EyeOff, Loader2, MessageSquare, Send } from 'lucide-react'
+import { NotaCuaderno, Respuesta } from '@/lib/types'
 import { TIPO_NOTA_CONFIG } from '@/lib/services/cuaderno.service'
 import { formatRelativo } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,9 @@ interface NotaCardProps {
   tutorNombre?: string
   onAcusar?: (notaId: string) => Promise<void>
   onToggleVisibilidad?: (notaId: string, visible: boolean) => Promise<void>
+  onResponder?: (notaId: string, contenido: string) => Promise<void>
+  /** Si el padre puede responder (feature flag) */
+  puedeResponder?: boolean
 }
 
 function fileTipoIcon(tipo: string) {
@@ -33,6 +36,13 @@ function formatTamaño(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function autorRolLabel(rol: string) {
+  if (rol === 'admin') return 'Administración'
+  if (rol === 'docente') return 'Docente'
+  if (rol === 'padre') return 'Familia'
+  return rol
+}
+
 export function NotaCard({
   nota,
   totalAlumnos = 0,
@@ -42,22 +52,34 @@ export function NotaCard({
   tutorNombre,
   onAcusar,
   onToggleVisibilidad,
+  onResponder,
+  puedeResponder = false,
 }: NotaCardProps) {
   const config = TIPO_NOTA_CONFIG[nota.tipo] ?? TIPO_NOTA_CONFIG.general
   const [expandido, setExpandido] = useState(false)
   const [acusando, setAcusando] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const [showReplies, setShowReplies] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [enviandoReply, setEnviandoReply] = useState(false)
 
   const yaAcusó = alumnoIdPadre
     ? nota.acusesRecibo?.some((a) => a.alumnoId === alumnoIdPadre && a.tutorId === tutorId)
     : false
 
   const cantAcuses = nota.acusesRecibo?.length ?? 0
+  const respuestas = nota.respuestas ?? []
   const contenidoLargo = nota.contenido?.length > 200
   const contenidoMostrado =
     contenidoLargo && !expandido
       ? nota.contenido.slice(0, 200).trim() + '…'
       : nota.contenido
+
+  const canReply = onResponder && (
+    mode === 'admin' ||
+    mode === 'docente' ||
+    (mode === 'padre' && puedeResponder)
+  )
 
   async function handleAcusar() {
     if (!onAcusar) return
@@ -79,6 +101,18 @@ export function NotaCard({
     }
   }
 
+  async function handleReply(e: React.FormEvent) {
+    e.preventDefault()
+    if (!replyText.trim() || !onResponder) return
+    setEnviandoReply(true)
+    try {
+      await onResponder(nota.id, replyText.trim())
+      setReplyText('')
+    } finally {
+      setEnviandoReply(false)
+    }
+  }
+
   return (
     <article
       className="card overflow-hidden transition-shadow hover:shadow-md"
@@ -95,6 +129,12 @@ export function NotaCard({
             <span>{config.emoji}</span>
             {config.label}
           </span>
+          {/* Padre badge */}
+          {nota.autorRol === 'padre' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 text-violet-600 border border-violet-100">
+              👨‍👩‍👧 Familia
+            </span>
+          )}
           {/* Urgente pulse */}
           {nota.tipo === 'urgente' && (
             <span className="flex h-2 w-2 relative">
@@ -123,8 +163,7 @@ export function NotaCard({
 
       {/* Autor */}
       <p className="px-5 text-xs text-gray-400 -mt-1 mb-3">
-        {nota.autorNombre} ·{' '}
-        <span className="capitalize">{nota.autorRol}</span>
+        {nota.autorNombre} · {autorRolLabel(nota.autorRol)}
       </p>
 
       {/* Contenido */}
@@ -172,6 +211,67 @@ export function NotaCard({
               </a>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Respuestas */}
+      {(respuestas.length > 0 || canReply) && (
+        <div className="px-5 mt-4">
+          {/* Toggle para mostrar/ocultar respuestas */}
+          {respuestas.length > 0 && (
+            <button
+              onClick={() => setShowReplies(!showReplies)}
+              className="flex items-center gap-1.5 text-xs font-semibold mb-2 hover:underline"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              <MessageSquare size={13} />
+              {respuestas.length} {respuestas.length === 1 ? 'respuesta' : 'respuestas'}
+              {showReplies ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+          )}
+
+          {showReplies && respuestas.length > 0 && (
+            <div className="space-y-2.5 mb-3 pl-3 border-l-2 border-gray-100">
+              {respuestas.map((r) => (
+                <div key={r.id} className="text-sm">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-semibold text-gray-800 text-xs">{r.autorNombre}</span>
+                    <span className="text-[10px] text-gray-400">{autorRolLabel(r.autorRol)}</span>
+                    <span className="text-[10px] text-gray-300 ml-auto">{formatRelativo(r.creadaEn)}</span>
+                  </div>
+                  <p className="text-gray-600 mt-0.5 leading-snug whitespace-pre-wrap">{r.contenido}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Input para nueva respuesta */}
+          {canReply && (
+            <form onSubmit={handleReply} className="flex items-end gap-2 mt-2 mb-1">
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Escribí una respuesta..."
+                className="flex-1 input resize-none py-2 text-sm min-h-[40px] max-h-[100px]"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleReply(e as any)
+                  }
+                }}
+                disabled={enviandoReply}
+              />
+              <button
+                type="submit"
+                disabled={enviandoReply || !replyText.trim()}
+                className="p-2.5 rounded-xl text-white disabled:opacity-40 transition-all active:scale-95 flex-shrink-0"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              >
+                {enviandoReply ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              </button>
+            </form>
+          )}
         </div>
       )}
 
