@@ -3,13 +3,19 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useTenant } from '@/contexts/TenantContext'
 import { useSalas } from '@/hooks/useSalas'
+import { useAuth as useAuthCtx } from '@/contexts/AuthContext'
 import { DoorOpen, BookOpen, ClipboardList, Bell, Loader2 } from 'lucide-react'
+import { SkeletonGrid } from '@/components/ui/Skeleton'
 import Link from 'next/link'
 
 export default function DocenteDashboardPage() {
-  const { user } = useAuth()
+  const { user, claims } = useAuth()
   const { tenant } = useTenant()
-  const { salas, loading } = useSalas(tenant.id)
+  const { salas: todasLasSalas, loading } = useSalas(tenant.id)
+
+  const salas = claims?.scope === 'institucion'
+    ? todasLasSalas
+    : todasLasSalas.filter(s => s.docenteIds?.includes(user?.uid ?? ''))
   
   const hora = new Date().getHours()
   const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
@@ -55,7 +61,7 @@ export default function DocenteDashboardPage() {
       <div className="card p-6">
         <h2 className="font-semibold text-gray-900 mb-4">Mis salas</h2>
         {loading ? (
-           <div className="flex justify-center py-4"><Loader2 size={24} className="animate-spin text-gray-300" /></div>
+          <SkeletonGrid count={3} cols="grid-cols-1 md:grid-cols-3" />
         ) : salas.length === 0 ? (
           <div className="text-sm text-gray-400 text-center py-8">
             No hay salas asignadas aún

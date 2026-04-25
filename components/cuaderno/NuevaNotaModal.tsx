@@ -14,7 +14,7 @@ interface NuevaNotaModalProps {
   onSubmit: (data: CreateNotaData) => Promise<void>
   autorId: string
   autorNombre: string
-  autorRol: 'admin' | 'docente'
+  autorRol: 'admin' | 'docente' | 'padre'
   defaultTipo?: TipoNota
 }
 

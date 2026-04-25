@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, Loader2, Edit2, Trash2, CalendarHeart, Users, HelpCircle } from 'lucide-react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useEventos } from '@/hooks/useCalendario'
 import { useSalas } from '@/hooks/useSalas'
@@ -102,9 +103,7 @@ export default function AdminCalendarioPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
-        </div>
+        <SkeletonList count={4} />
       ) : eventos.length === 0 ? (
         <EmptyState
           icon="📅"

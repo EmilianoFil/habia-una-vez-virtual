@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Calendar, Loader2 } from 'lucide-react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSalas } from '@/hooks/useSalas'
@@ -65,9 +66,7 @@ export default function AdminAsistenciaPage() {
 
       {/* Tabs de salas */}
       {salasLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
-        </div>
+        <SkeletonList count={5} />
       ) : salas.length === 0 ? (
         <EmptyState
           icon="🏫"

@@ -108,6 +108,40 @@ export async function cambiarSalaAlumno(
   await batch.commit()
 }
 
+export interface BajaAlumnoData {
+  motivo: string
+  salaActualId: string | null
+  deshabilitarTutores?: boolean
+}
+
+/**
+ * Da de baja a un alumno: lo inactiva, lo quita de su sala y registra el motivo.
+ */
+export async function darDeBajaAlumno(
+  tenantId: string,
+  alumnoId: string,
+  data: BajaAlumnoData
+): Promise<void> {
+  const batch = writeBatch(db)
+  const alumnoRef = doc(db, `tenants/${tenantId}/alumnos/${alumnoId}`)
+
+  batch.update(alumnoRef, {
+    activo: false,
+    salaActualId: null,
+    motivoBaja: data.motivo,
+    fechaBaja: serverTimestamp(),
+    actualizadoEn: serverTimestamp(),
+  })
+
+  if (data.salaActualId) {
+    batch.update(doc(db, `tenants/${tenantId}/salas/${data.salaActualId}`), {
+      alumnoIds: arrayRemove(alumnoId),
+    })
+  }
+
+  await batch.commit()
+}
+
 export async function deactivateAlumno(tenantId: string, alumnoId: string): Promise<void> {
   await updateDoc(doc(db, `tenants/${tenantId}/alumnos/${alumnoId}`), { activo: false })
 }

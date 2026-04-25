@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, Edit2, Trash2, Loader2, Clock } from 'lucide-react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useDocentes } from '@/hooks/useDocentes'
 import { useSalas } from '@/hooks/useSalas'
@@ -112,9 +113,7 @@ export default function DocentesPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={28} className="animate-spin text-gray-300" />
-        </div>
+        <SkeletonList count={5} />
       ) : docentes.length === 0 ? (
         <EmptyState
           icon="👩‍🏫"

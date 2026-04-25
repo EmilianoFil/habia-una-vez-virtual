@@ -11,7 +11,9 @@ export function useNotasDeSala(tenantId: string | null, salaId: string | null) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!tenantId || !salaId) { setLoading(false); return }
+    if (!tenantId || !salaId) { setNotas([]); setLoading(false); return }
+    setNotas([])
+    setLoading(true)
 
     const q = query(
       collection(db, `tenants/${tenantId}/salas/${salaId}/notas`),

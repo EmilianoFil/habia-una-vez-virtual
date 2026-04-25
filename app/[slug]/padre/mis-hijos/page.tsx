@@ -8,6 +8,7 @@ import { updateAlumno } from '@/lib/services/alumnos.service'
 import { ContactoEmergencia, AutorizadoRetiro } from '@/lib/types'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Loader2, Plus, Trash2, Save, Phone, Mail, User, Shield } from 'lucide-react'
+import { SkeletonCard } from '@/components/ui/Skeleton'
 
 const EMPTY_CONTACTO: ContactoEmergencia = { nombre: '', relacion: '', telefono: '', email: '' }
 const EMPTY_AUTORIZADO: AutorizadoRetiro = { nombre: '', relacion: '', telefono: '', dni: '', foto: null, email: '' }
@@ -63,7 +64,13 @@ export default function MisHijosPage() {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-20"><Loader2 size={24} className="animate-spin text-gray-300" /></div>
+    return (
+      <div className="p-6 lg:p-8 max-w-3xl space-y-4">
+        <SkeletonCard lines={3} />
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={4} />
+      </div>
+    )
   }
 
   if (misAlumnos.length === 0) {

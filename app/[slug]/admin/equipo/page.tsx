@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import {
   GraduationCap, Shield, Plus, Edit2, Trash2, Loader2,
   CheckCircle2, XCircle, Key, DoorOpen, Globe, Copy, UserX, UserCheck, Link as LinkIcon,
@@ -139,7 +140,7 @@ export default function EquipoPage() {
     setError(null)
     try {
       if (editingDocente) {
-        await updateDocente(tenant.id, editingDocente.id, form)
+        await updateDocente(tenant.id, editingDocente.id, form, editingDocente.salasIds ?? [])
       } else {
         await createDocente(tenant.id, form)
       }
@@ -285,7 +286,7 @@ export default function EquipoPage() {
 
       {/* Lista */}
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 size={28} className="animate-spin text-gray-300" /></div>
+        <SkeletonList count={5} />
       ) : visibleList.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="text-5xl mb-4">{tab === 'docentes' ? '👩‍🏫' : '🗂️'}</div>

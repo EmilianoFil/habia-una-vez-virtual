@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { Plus, Loader2, BookOpen, CheckCircle, AlertCircle, Info } from 'lucide-react'
+import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSalas } from '@/hooks/useSalas'
 import { useNotasDeSala } from '@/hooks/useNotas'
-import { createNota, toggleVisibilidadNota, CreateNotaData } from '@/lib/services/cuaderno.service'
+import { createNota, toggleVisibilidadNota, addRespuesta, CreateNotaData } from '@/lib/services/cuaderno.service'
 import { NotaCard } from '@/components/cuaderno/NotaCard'
 import { NuevaNotaModal } from '@/components/cuaderno/NuevaNotaModal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -61,6 +62,18 @@ export default function AdminCuadernoPage() {
     await toggleVisibilidadNota(tenant.id, salaId, notaId, visible)
   }
 
+  async function handleResponder(notaId: string, contenido: string) {
+    if (!salaId || !user) return
+    await addRespuesta(tenant.id, salaId, notaId, {
+      id: crypto.randomUUID(),
+      autorId: user.uid,
+      autorNombre: user.displayName ?? user.email?.split('@')[0] ?? 'Admin',
+      autorRol: 'admin',
+      contenido,
+      creadaEn: new Date().toISOString(),
+    })
+  }
+
   return (
     <div className="p-6 lg:p-8 animate-fade-in">
       {emailToast && (
@@ -83,9 +96,7 @@ export default function AdminCuadernoPage() {
 
       {/* Selector de salas */}
       {salasLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
-        </div>
+        <SkeletonList count={3} />
       ) : salas.length === 0 ? (
         <EmptyState
           icon="🏫"
@@ -159,6 +170,7 @@ export default function AdminCuadernoPage() {
                   totalAlumnos={sala?.alumnoIds?.length ?? 0}
                   mode="admin"
                   onToggleVisibilidad={handleToggleVisibilidad}
+                  onResponder={handleResponder}
                 />
               ))}
             </div>

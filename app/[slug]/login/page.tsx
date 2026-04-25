@@ -44,7 +44,7 @@ export default function LoginPage() {
 
     try {
       const result = await loginWithEmail(email, password)
-      const userClaims = await getUserClaims(result.user)
+      const userClaims = await getUserClaims(result.user, true) // force refresh para claims actualizados
 
       if (!userClaims) {
         setError('Tu cuenta no tiene permisos asignados. Contactá al administrador.')

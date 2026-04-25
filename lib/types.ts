@@ -21,6 +21,7 @@ export interface TenantConfig {
     turnos?: TurnoConfig[]
     emailSettings?: EmailSettings
     emailTemplateUrl?: string | null // Template HTML genérico para correos institucionales
+    permitirNotasDePadres?: boolean  // Habilita que los padres envíen notas en el cuaderno
   }
 }
 
@@ -136,6 +137,8 @@ export interface Alumno {
   salaActualId: string | null
   historialSalas: HistorialSala[]
   activo: boolean
+  motivoBaja?: string
+  fechaBaja?: any
 }
 
 // --- Docente ---
@@ -191,6 +194,15 @@ export interface AcuseRecibo {
   fecha: string // ISO
 }
 
+export interface Respuesta {
+  id: string
+  autorId: string
+  autorNombre: string
+  autorRol: 'admin' | 'docente' | 'padre'
+  contenido: string
+  creadaEn: string // ISO
+}
+
 export interface NotaAdjunto {
   nombre: string
   url: string
@@ -210,13 +222,14 @@ export interface NotaCuaderno {
   adjuntos: NotaAdjunto[]
   autorId: string
   autorNombre: string
-  autorRol: 'admin' | 'docente'
+  autorRol: 'admin' | 'docente' | 'padre'
   salaId: string
   tenantId: string
   creadaEn: any // Firestore Timestamp | null durante write pending
   acusesRecibo: AcuseRecibo[]
   alumnosDestino: string[] // vacío = todos en la sala
   visible: boolean
+  respuestas?: Respuesta[]
 }
 
 // Alias legacy

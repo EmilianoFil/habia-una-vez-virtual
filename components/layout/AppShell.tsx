@@ -32,13 +32,14 @@ interface NavItem {
   icon: React.ElementType
   label: string
   href: string // relativo al slug, ej: "admin" → /[slug]/admin
+  exact?: boolean // si true, solo activo con match exacto (no startsWith)
 }
 
 function getNavItems(slug: string, role: UserRole): NavItem[] {
   const base = `/${slug}`
   if (role === 'admin') {
     return [
-      { icon: LayoutDashboard, label: 'Panel', href: `${base}/admin` },
+      { icon: LayoutDashboard, label: 'Panel', href: `${base}/admin`, exact: true },
       { icon: Users, label: 'Alumnos', href: `${base}/admin/alumnos` },
       { icon: DoorOpen, label: 'Salas', href: `${base}/admin/salas` },
       { icon: ShieldCheck, label: 'Equipo & Accesos', href: `${base}/admin/equipo` },
@@ -52,7 +53,7 @@ function getNavItems(slug: string, role: UserRole): NavItem[] {
   }
   if (role === 'docente') {
     return [
-      { icon: DoorOpen, label: 'Mis Salas', href: `${base}/docente` },
+      { icon: DoorOpen, label: 'Mis Salas', href: `${base}/docente`, exact: true },
       { icon: BookOpen, label: 'Cuaderno', href: `${base}/docente/cuaderno` },
       { icon: ClipboardList, label: 'Asistencia', href: `${base}/docente/asistencia` },
       { icon: FolderOpen, label: 'Archivos', href: `${base}/docente/archivos` },
@@ -60,7 +61,7 @@ function getNavItems(slug: string, role: UserRole): NavItem[] {
   }
   if (role === 'padre') {
     return [
-      { icon: LayoutDashboard, label: 'Inicio', href: `${base}/padre` },
+      { icon: LayoutDashboard, label: 'Inicio', href: `${base}/padre`, exact: true },
       { icon: BookOpen, label: 'Comunicaciones', href: `${base}/padre/comunicaciones` },
       { icon: FolderOpen, label: 'Archivos', href: `${base}/padre/archivos` },
       { icon: CalendarDays, label: 'Calendario', href: `${base}/padre/calendario` },
@@ -111,7 +112,9 @@ function Sidebar({ navItems }: { navItems: NavItem[] }) {
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const isActive = item.exact
+            ? pathname === item.href
+            : (pathname === item.href || pathname.startsWith(item.href + '/'))
           return (
             <Link
               key={item.href}
@@ -175,7 +178,9 @@ function BottomNav({ navItems }: { navItems: NavItem[] }) {
       <div className="flex">
         {mobileItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const isActive = item.exact
+            ? pathname === item.href
+            : (pathname === item.href || pathname.startsWith(item.href + '/'))
           return (
             <Link
               key={item.href}

@@ -145,3 +145,68 @@ export async function sendNoteEmail(
     html: htmlContent,
   })
 }
+
+/**
+ * Envía un comunicado institucional (broadcast a todas las familias).
+ */
+export async function sendAnnouncementEmail(
+  settings: EmailSettings,
+  to: string,
+  titulo: string,
+  contenido: string,
+  autorNombre: string,
+  tenantName: string,
+  templateHtml?: string | null
+) {
+  if (!settings.enabled || !settings.email || !settings.appPassword) return
+
+  const transporter = getTransporter(settings)
+  const preview = stripHtmlToText(contenido).slice(0, 150) + '...'
+
+  let htmlContent: string
+  if (templateHtml) {
+    const vars: Record<string, string> = {
+      titulo,
+      contenido,
+      contenido_texto: preview,
+      autor: autorNombre,
+      rol: 'Administración',
+      institucion: tenantName,
+      app_url: APP_URL,
+      fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }),
+    }
+    htmlContent = applyTemplate(templateHtml, vars)
+  } else {
+    htmlContent = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+        <div style="background-color: #6366f1; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 20px;">📣 Comunicado institucional</h1>
+          <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px;">${tenantName}</p>
+        </div>
+        <div style="padding: 25px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: white;">
+          <h2 style="margin-top: 0; color: #111827;">${titulo}</h2>
+          <div style="color: #4b5563;">${contenido}</div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${APP_URL}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Abrir la app
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #9ca3af; border-top: 1px solid #f3f4f6; margin-top: 20px; padding-top: 15px;">
+            Enviado por: ${autorNombre} — ${tenantName}
+          </p>
+        </div>
+        <p style="font-size: 11px; color: #999; text-align: center; margin-top: 20px;">
+          Recibes este mail porque eres tutor/a registrado/a en ${tenantName}.<br>
+          Había una vez Virtual.
+        </p>
+      </div>
+    `
+  }
+
+  await transporter.sendMail({
+    from: `"${tenantName}" <${settings.email}>`,
+    to,
+    subject: `📣 ${titulo} — ${tenantName}`,
+    html: htmlContent,
+  })
+}

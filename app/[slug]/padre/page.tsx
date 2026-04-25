@@ -8,6 +8,7 @@ import { useSolicitudes } from '@/hooks/useArchivos'
 import { useEventos } from '@/hooks/useCalendario'
 import { useNotasDeSala } from '@/hooks/useNotas'
 import { BookOpen, FolderOpen, CalendarDays, Loader2, ArrowRight } from 'lucide-react'
+import { SkeletonGrid } from '@/components/ui/Skeleton'
 import Link from 'next/link'
 
 export default function PadreDashboardPage() {
@@ -47,7 +48,7 @@ export default function PadreDashboardPage() {
       </div>
 
       {alumnosLoading ? (
-        <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-gray-300"/></div>
+        <SkeletonGrid count={3} cols="grid-cols-1 md:grid-cols-3" />
       ) : misAlumnos.length === 0 ? (
         <div className="card p-6 flex flex-col items-center justify-center text-center">
           <span className="text-4xl mb-3">👧</span>
