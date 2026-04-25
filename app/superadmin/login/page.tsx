@@ -3,10 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 import { auth } from '@/lib/firebase'
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-} from 'firebase/auth'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 import {
   getUserClaims,
   createSessionCookie,
@@ -20,18 +17,22 @@ export default function SuperadminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Si ya hay sesión de superadmin activa en Firebase Auth, redirigir
+  // Si ya hay sesión de servidor activa (cookie __claims) y es superadmin, redirigir
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const claims = await getUserClaims(user)
+    try {
+      const claimsCookie = document.cookie
+        .split('; ')
+        .find(c => c.startsWith('__claims='))
+        ?.split('=')
+        .slice(1)
+        .join('=')
+      if (claimsCookie) {
+        const claims = JSON.parse(decodeURIComponent(claimsCookie))
         if (claims?.role === 'superadmin') {
-          // Hard redirect: asegura que el browser envíe las cookies de sesión al servidor
           window.location.href = '/superadmin'
         }
       }
-    })
-    return unsubscribe
+    } catch {}
   }, [])
 
   async function handleLogin(e: React.FormEvent) {
