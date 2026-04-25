@@ -78,13 +78,28 @@ export async function POST(request: NextRequest) {
 
     await adminAuth.setCustomUserClaims(userRecord.uid, claims)
 
-    // 5. Generar link de cambio de contraseña e intentar enviar email si está configurado
-    const resetLink = await adminAuth.generatePasswordResetLink(email)
+    // 5. Obtener datos del tenant para construir el link y enviar mail
+    const tenantDoc = await adminDb.doc(`tenants/${tenantId}`).get()
+    const tenantData = tenantDoc.data()
+    const tenantSlug: string = tenantData?.config?.slug ?? tenantId
 
-    // 6. Intentar enviar email (opcional, no bloquea la respuesta)
+    // 6. Generar token de setup y guardarlo en Firestore (expira en 48h)
+    const setupToken = randomBytes(32).toString('hex')
+    const expiresAt = Date.now() + 48 * 60 * 60 * 1000
+    await adminDb.doc(`setupLinks/${setupToken}`).set({
+      uid: userRecord.uid,
+      email,
+      tenantId,
+      slug: tenantSlug,
+      createdAt: Date.now(),
+      expiresAt,
+    })
+
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://habia-una-vez-virtual.web.app'
+    const setupLink = `${APP_URL}/${tenantSlug}/configurar-clave?token=${setupToken}`
+
+    // 7. Intentar enviar email (opcional, no bloquea la respuesta)
     try {
-      const tenantDoc = await adminDb.doc(`tenants/${tenantId}`).get()
-      const tenantData = tenantDoc.data()
       const emailSettings = tenantData?.configuracion?.emailSettings
       if (emailSettings?.enabled) {
         const generalTemplateUrl: string | null = tenantData?.configuracion?.emailTemplateUrl ?? null
@@ -96,20 +111,19 @@ export async function POST(request: NextRequest) {
         await sendWelcomeEmail(
           emailSettings,
           email,
-          resetLink,
+          setupLink,
           tenantData.config.name,
           templateHtml
         )
       }
     } catch (mailErr) {
       console.error('[API/admin/set-role] Error al enviar mail:', mailErr)
-      // No devolvemos error aquí para que el proceso de alta no falle
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: isNewUser ? `Usuario creado y rol ${role} asignado.` : `Rol ${role} asignado exitosamente.`,
-      resetLink,
+      setupLink,
       uid: userRecord.uid
     })
 

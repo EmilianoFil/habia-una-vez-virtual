@@ -50,6 +50,7 @@ export function middleware(request: NextRequest) {
   const firstSegment = parts[0]        // slug o 'superadmin'
   const secondSegment = parts[1]       // 'login', 'admin', 'docente', 'padre', etc.
   const isLoginPage = secondSegment === 'login' || pathname === '/superadmin/login'
+  const isPublicPage = secondSegment === 'configurar-clave'
   const isRootPage = !firstSegment     // ruta "/"
 
   const sessionCookie = request.cookies.get('__session')?.value
@@ -101,6 +102,10 @@ export function middleware(request: NextRequest) {
 
   // --- Tenant routes /[slug]/*** ---
   const slug = firstSegment
+
+  if (isPublicPage) {
+    return NextResponse.next()
+  }
 
   if (isLoginPage) {
     // Ya logueado → redirigir a su dashboard
