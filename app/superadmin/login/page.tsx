@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 import { auth } from '@/lib/firebase'
 import {
@@ -15,25 +14,25 @@ import {
 } from '@/lib/auth'
 
 export default function SuperadminLoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Si ya hay sesión de superadmin, redirigir
+  // Si ya hay sesión de superadmin activa en Firebase Auth, redirigir
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const claims = await getUserClaims(user)
         if (claims?.role === 'superadmin') {
-          router.replace('/superadmin')
+          // Hard redirect: asegura que el browser envíe las cookies de sesión al servidor
+          window.location.href = '/superadmin'
         }
       }
     })
     return unsubscribe
-  }, [router])
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -53,7 +52,8 @@ export default function SuperadminLoginPage() {
       }
 
       await createSessionCookie(result.user)
-      router.replace('/superadmin')
+      // Hard redirect: fuerza recarga completa para que el servidor lea la cookie de sesión
+      window.location.href = '/superadmin'
     } catch (err: any) {
       setError(err?.message || getAuthErrorMessage(err?.code ?? ''))
       setIsSubmitting(false)
