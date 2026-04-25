@@ -85,12 +85,20 @@ export async function POST(request: NextRequest) {
     try {
       const tenantDoc = await adminDb.doc(`tenants/${tenantId}`).get()
       const tenantData = tenantDoc.data()
-      if (tenantData?.config?.configuracion?.emailSettings?.enabled) {
+      const emailSettings = tenantData?.config?.configuracion?.emailSettings
+      if (emailSettings?.enabled) {
+        const generalTemplateUrl: string | null = tenantData?.config?.configuracion?.emailTemplateUrl ?? null
+        let templateHtml: string | null = null
+        if (generalTemplateUrl) {
+          const res = await fetch(generalTemplateUrl)
+          if (res.ok) templateHtml = await res.text()
+        }
         await sendWelcomeEmail(
-          tenantData.config.configuracion.emailSettings,
+          emailSettings,
           email,
           resetLink,
-          tenantData.config.name
+          tenantData.config.name,
+          templateHtml
         )
       }
     } catch (mailErr) {

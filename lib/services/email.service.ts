@@ -33,19 +33,32 @@ function getTransporter(settings: EmailSettings) {
 }
 
 /**
- * Envía un mail de bienvenida con el link de reseteo de clave
+ * Envía un mail de bienvenida con el link de reseteo de clave.
+ * Si se provee templateHtml, aplica sustitución de variables {{...}}.
+ * Variables disponibles: reset_link, institucion, app_url, fecha
  */
 export async function sendWelcomeEmail(
   settings: EmailSettings,
   to: string,
   resetLink: string,
-  tenantName: string
+  tenantName: string,
+  templateHtml?: string | null
 ) {
   if (!settings.enabled || !settings.email || !settings.appPassword) return
 
   const transporter = getTransporter(settings)
 
-  const htmlContent = `
+  let htmlContent: string
+  if (templateHtml) {
+    const vars: Record<string, string> = {
+      reset_link: resetLink,
+      institucion: tenantName,
+      app_url: APP_URL,
+      fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }),
+    }
+    htmlContent = applyTemplate(templateHtml, vars)
+  } else {
+    htmlContent = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
       <h2 style="color: #6366f1; border-bottom: 2px solid #6366f1; padding-bottom: 10px;">¡Bienvenido a ${tenantName}!</h2>
       <p>Hola,</p>
@@ -64,6 +77,7 @@ export async function sendWelcomeEmail(
       <p style="font-size: 11px; color: #999; text-align: center;">Esta es una notificación automática de ${tenantName} vía Había una vez Virtual.</p>
     </div>
   `
+  }
 
   await transporter.sendMail({
     from: `"${tenantName}" <${settings.email}>`,
