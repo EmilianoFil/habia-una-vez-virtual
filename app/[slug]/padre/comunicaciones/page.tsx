@@ -47,12 +47,21 @@ export default function PadreComunicacionesPage() {
   const [enviandoNota, setEnviandoNota] = useState(false)
   const [notaError, setNotaError] = useState<string | null>(null)
 
-  const notasFiltradas = useMemo(
-    () => filtroTipo === 'todos' ? notas : notas.filter((n) => n.tipo === filtroTipo),
-    [notas, filtroTipo]
+  // Solo notas para toda la sala (alumnosDestino vacío) o para este alumno específicamente
+  const notasDelAlumno = useMemo(
+    () => notas.filter((n) => {
+      const dest = n.alumnosDestino ?? []
+      return dest.length === 0 || dest.includes(alumnoActivo?.id ?? '')
+    }),
+    [notas, alumnoActivo?.id]
   )
 
-  const notasNoLeidas = notas.filter(
+  const notasFiltradas = useMemo(
+    () => filtroTipo === 'todos' ? notasDelAlumno : notasDelAlumno.filter((n) => n.tipo === filtroTipo),
+    [notasDelAlumno, filtroTipo]
+  )
+
+  const notasNoLeidas = notasDelAlumno.filter(
     (n) => !n.acusesRecibo?.some((a) => a.tutorId === user?.uid && a.alumnoId === alumnoActivo?.id)
   ).length
 

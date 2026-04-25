@@ -1,14 +1,16 @@
 'use client'
 
-import { ArrowLeft, Phone, Heart, Users, Shield, Loader2, BookOpen, Mail, Key, Edit2, FileText, Calendar, UserX, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Phone, Heart, Users, Shield, Loader2, BookOpen, Mail, Key, Edit2, FileText, Calendar, UserX, AlertTriangle, MessageSquarePlus } from 'lucide-react'
 import { SkeletonCard } from '@/components/ui/Skeleton'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useTenant } from '@/contexts/TenantContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { useAlumno } from '@/hooks/useAlumnos'
 import { useSalas } from '@/hooks/useSalas'
 import { formatFecha, calcularEdadDetalle, getIniciales, formatRelativo } from '@/lib/utils'
 import { vincularTutorAlumno, darDeBajaAlumno } from '@/lib/services/alumnos.service'
+import { createNota } from '@/lib/services/cuaderno.service'
 import { TurnoBadge } from '@/components/ui/Badge'
 import { useState } from 'react'
 import { useTutores } from '@/hooks/useTutores'
@@ -18,6 +20,7 @@ import { doc, updateDoc } from 'firebase/firestore'
 
 export default function AlumnoDetailPage() {
   const { tenant } = useTenant()
+  const { user, claims } = useAuth()
   const router = useRouter()
   const params = useParams()
   const alumnoId = params.alumnoId as string
@@ -30,11 +33,46 @@ export default function AlumnoDetailPage() {
   const [grantingAccess, setGrantingAccess] = useState<string | null>(null)
   const [togglingUid, setTogglingUid] = useState<string | null>(null)
 
+  // Nota individual
+  const [notaModal, setNotaModal] = useState(false)
+  const [notaTitulo, setNotaTitulo] = useState('')
+  const [notaContenido, setNotaContenido] = useState('')
+  const [notaSaving, setNotaSaving] = useState(false)
+  const [notaError, setNotaError] = useState<string | null>(null)
+  const [notaOk, setNotaOk] = useState(false)
+
   // Baja
   const [bajaModal, setBajaModal] = useState(false)
   const [bajaMotivo, setBajaMotivo] = useState('')
   const [bajaDeshabilitarTutores, setBajaDeshabilitarTutores] = useState(true)
   const [bajaSaving, setBajaSaving] = useState(false)
+
+  async function handleEnviarNota(e: React.FormEvent) {
+    e.preventDefault()
+    if (!notaTitulo.trim() || !notaContenido.trim() || !alumno?.salaActualId) return
+    setNotaSaving(true)
+    setNotaError(null)
+    try {
+      await createNota(tenant.id, alumno.salaActualId, {
+        titulo: notaTitulo.trim(),
+        contenido: notaContenido.trim(),
+        tipo: 'general',
+        files: [],
+        autorId: user?.uid ?? '',
+        autorNombre: user?.displayName ?? user?.email?.split('@')[0] ?? 'Admin',
+        autorRol: claims?.role === 'docente' ? 'docente' : 'admin',
+        alumnosDestino: [alumnoId],
+      })
+      setNotaOk(true)
+      setNotaTitulo('')
+      setNotaContenido('')
+      setTimeout(() => { setNotaOk(false); setNotaModal(false) }, 1500)
+    } catch (err: any) {
+      setNotaError(err.message ?? 'Error al enviar la nota.')
+    } finally {
+      setNotaSaving(false)
+    }
+  }
 
   async function handleDarDeBaja() {
     if (!bajaMotivo.trim()) return
@@ -144,6 +182,14 @@ export default function AlumnoDetailPage() {
           >
             <Edit2 size={15} /> Editar
           </Link>
+          {alumno.salaActualId && (
+            <button
+              onClick={() => { setNotaTitulo(''); setNotaContenido(''); setNotaError(null); setNotaOk(false); setNotaModal(true) }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-semibold transition-colors"
+            >
+              <MessageSquarePlus size={13} /> Enviar nota
+            </button>
+          )}
           {alumno.activo !== false && (
             <button
               onClick={() => { setBajaMotivo(''); setBajaDeshabilitarTutores(true); setBajaModal(true) }}
@@ -427,6 +473,62 @@ export default function AlumnoDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Modal nota individual */}
+      <Modal
+        open={notaModal}
+        onClose={() => !notaSaving && setNotaModal(false)}
+        title={`Enviar nota a ${dp?.nombre}`}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setNotaModal(false)} disabled={notaSaving} className="btn-secondary px-4 py-2">Cancelar</button>
+            <button
+              onClick={handleEnviarNota}
+              disabled={notaSaving || !notaTitulo.trim() || !notaContenido.trim()}
+              className="btn-primary px-5 py-2"
+            >
+              {notaSaving && <Loader2 size={15} className="animate-spin" />}
+              {notaSaving ? 'Enviando…' : '📤 Enviar nota'}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {notaOk && (
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 font-semibold">
+              ✅ Nota enviada correctamente. Solo los familiares de {dp?.nombre} la verán.
+            </div>
+          )}
+          {notaError && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">{notaError}</div>
+          )}
+          <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-700">
+            📌 Esta nota solo será visible para los familiares de <strong>{dp?.nombre} {dp?.apellido}</strong>, no para el resto de la sala.
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Asunto *</label>
+            <input
+              type="text"
+              value={notaTitulo}
+              onChange={e => setNotaTitulo(e.target.value)}
+              placeholder="Ej: Recordatorio médico, conducta, avance personal..."
+              className="input"
+              disabled={notaSaving}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Mensaje *</label>
+            <textarea
+              value={notaContenido}
+              onChange={e => setNotaContenido(e.target.value)}
+              placeholder="Escribí el mensaje..."
+              className="input resize-none"
+              rows={5}
+              disabled={notaSaving}
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal de baja */}
       <Modal

@@ -23,6 +23,8 @@ interface NotaCardProps {
   onResponder?: (notaId: string, contenido: string) => Promise<void>
   /** Si el padre puede responder (feature flag) */
   puedeResponder?: boolean
+  /** Nombre del alumno destinatario (para badge en vista admin/docente) */
+  alumnoDestinoNombre?: string
 }
 
 function fileTipoIcon(tipo: string) {
@@ -54,6 +56,7 @@ export function NotaCard({
   onToggleVisibilidad,
   onResponder,
   puedeResponder = false,
+  alumnoDestinoNombre,
 }: NotaCardProps) {
   const config = TIPO_NOTA_CONFIG[nota.tipo] ?? TIPO_NOTA_CONFIG.general
   const [expandido, setExpandido] = useState(false)
@@ -129,6 +132,22 @@ export function NotaCard({
             <span>{config.emoji}</span>
             {config.label}
           </span>
+          {/* Badge nota personal (para un alumno específico) */}
+          {(nota.alumnosDestino?.length ?? 0) > 0 && mode === 'padre' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+              👤 Solo para vos
+            </span>
+          )}
+          {(nota.alumnosDestino?.length ?? 0) > 0 && (mode === 'admin' || mode === 'docente') && alumnoDestinoNombre && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+              👤 {alumnoDestinoNombre}
+            </span>
+          )}
+          {(nota.alumnosDestino?.length ?? 0) > 0 && (mode === 'admin' || mode === 'docente') && !alumnoDestinoNombre && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+              👤 Individual
+            </span>
+          )}
           {/* Padre badge */}
           {nota.autorRol === 'padre' && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 text-violet-600 border border-violet-100">
