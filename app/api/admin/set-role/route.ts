@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
     try {
       const tenantDoc = await adminDb.doc(`tenants/${tenantId}`).get()
       const tenantData = tenantDoc.data()
-      const emailSettings = tenantData?.config?.configuracion?.emailSettings
+      const emailSettings = tenantData?.configuracion?.emailSettings
       if (emailSettings?.enabled) {
-        const generalTemplateUrl: string | null = tenantData?.config?.configuracion?.emailTemplateUrl ?? null
+        const generalTemplateUrl: string | null = tenantData?.configuracion?.emailTemplateUrl ?? null
         let templateHtml: string | null = null
         if (generalTemplateUrl) {
           const res = await fetch(generalTemplateUrl)
