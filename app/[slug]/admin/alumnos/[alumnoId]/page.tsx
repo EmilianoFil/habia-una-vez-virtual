@@ -12,7 +12,7 @@ import { formatFecha, calcularEdadDetalle, getIniciales, formatRelativo } from '
 import { vincularTutorAlumno, darDeBajaAlumno } from '@/lib/services/alumnos.service'
 import { createNota } from '@/lib/services/cuaderno.service'
 import { TurnoBadge } from '@/components/ui/Badge'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTutores } from '@/hooks/useTutores'
 import { Modal } from '@/components/ui/Modal'
 import { db } from '@/lib/firebase'
@@ -32,6 +32,30 @@ export default function AlumnoDetailPage() {
 
   const [grantingAccess, setGrantingAccess] = useState<string | null>(null)
   const [togglingUid, setTogglingUid] = useState<string | null>(null)
+  const [validatingAccess, setValidatingAccess] = useState(false)
+  const [orphanedUids, setOrphanedUids] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!tutores.length) return
+    const tutoresConAcceso = tutores.filter(t => t.alumnoIds?.includes(alumnoId) && t.uid)
+    if (!tutoresConAcceso.length) return
+
+    setValidatingAccess(true)
+    fetch('/api/admin/check-auth-users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uids: tutoresConAcceso.map(t => t.uid) }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        const missing = new Set<string>(
+          (data.results ?? []).filter((r: { uid: string; exists: boolean }) => !r.exists).map((r: { uid: string }) => r.uid)
+        )
+        setOrphanedUids(missing)
+      })
+      .catch(() => {})
+      .finally(() => setValidatingAccess(false))
+  }, [tutores, alumnoId])
 
   // Nota individual
   const [notaModal, setNotaModal] = useState(false)
@@ -329,6 +353,11 @@ export default function AlumnoDetailPage() {
           <div className="flex items-center gap-2 mb-4">
             <Key size={18} className="text-indigo-600" />
             <h3 className="font-semibold text-gray-900">Acceso para familiares</h3>
+            {validatingAccess && (
+              <span className="ml-auto flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
+                <Loader2 size={11} className="animate-spin" /> Validando accesos...
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
             Otorgá acceso a los familiares para que puedan ver el cuaderno y las comunicaciones de {dp.nombre} en tiempo real. 
@@ -343,6 +372,7 @@ export default function AlumnoDetailPage() {
               const hasAccess = isRegistered && (tutor!.alumnoIds?.includes(alumnoId) ?? false)
               const isEnabled = tutor?.activo !== false
               const isToggling = togglingUid === tutor?.uid
+              const isOrphaned = hasAccess && tutor?.uid ? orphanedUids.has(tutor.uid) : false
 
               return (
                 <div key={i} className={`p-4 bg-white rounded-2xl border transition-all flex flex-col gap-4 ${
@@ -370,7 +400,42 @@ export default function AlumnoDetailPage() {
                   )}
 
                   <div className="flex gap-2">
-                    {!isRegistered ? (
+                    {isOrphaned ? (
+                      // Usuario fue borrado de Firebase Auth — cuenta huérfana
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1.5 rounded-lg">
+                          <AlertTriangle size={10} className="shrink-0" />
+                          La cuenta fue eliminada. Necesita volver a crear acceso.
+                        </div>
+                        <button
+                          disabled={grantingAccess === c.email}
+                          onClick={async () => {
+                            if (!confirm(`¿Re-crear el acceso para ${c.nombre} (${c.email})? Se le enviará un mail para configurar una nueva contraseña.`)) return
+                            setGrantingAccess(c.email || null)
+                            try {
+                              const res = await fetch('/api/admin/set-role', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: c.email, role: 'padre', tenantId: tenant.id, scope: 'salas_propias' })
+                              })
+                              const data = await res.json()
+                              if (!res.ok) throw new Error(data.error)
+                              await vincularTutorAlumno(tenant.id, alumnoId, data.uid, { nombre: c.nombre, email: c.email! })
+                              setOrphanedUids(prev => { const s = new Set(prev); s.delete(tutor!.uid); return s })
+                              alert('Acceso re-creado correctamente. Se envió un mail con el link para crear contraseña.')
+                            } catch (err: any) {
+                              alert('Error: ' + err.message)
+                            } finally {
+                              setGrantingAccess(null)
+                            }
+                          }}
+                          className="btn-primary py-2.5 text-xs w-full flex items-center justify-center gap-2"
+                        >
+                          {grantingAccess === c.email ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
+                          {grantingAccess === c.email ? 'Procesando...' : 'Re-crear acceso y enviar mail'}
+                        </button>
+                      </div>
+                    ) : !isRegistered ? (
                       // Sin cuenta: crear usuario + vincular
                       <button
                         disabled={grantingAccess === c.email}
