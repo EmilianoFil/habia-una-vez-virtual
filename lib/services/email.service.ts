@@ -53,7 +53,7 @@ export async function sendWelcomeEmail(
     const vars: Record<string, string> = {
       reset_link: resetLink,
       institucion: tenantName,
-      app_url: APP_URL,
+      app_url: resetLink,
       fecha: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }),
     }
     htmlContent = applyTemplate(templateHtml, vars)

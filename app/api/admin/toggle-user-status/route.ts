@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth } from '@/lib/firebase-admin'
-import { doc, updateDoc } from 'firebase/firestore'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
 
 /**
  * POST /api/admin/toggle-user-status
@@ -40,8 +39,15 @@ export async function POST(request: NextRequest) {
 
     await adminAuth.updateUser(uid, { disabled })
 
-    return NextResponse.json({ 
-      success: true, 
+    // Sync activo field in Firestore tutor doc so disabled users stop receiving emails
+    try {
+      await adminDb.doc(`tenants/${tenantId}/tutores/${uid}`).update({ activo: !disabled })
+    } catch {
+      // Tutor doc may not exist if the user is not a padre — ignore
+    }
+
+    return NextResponse.json({
+      success: true,
       message: disabled ? 'Cuenta deshabilitada.' : 'Cuenta habilitada.',
     })
   } catch (error: any) {

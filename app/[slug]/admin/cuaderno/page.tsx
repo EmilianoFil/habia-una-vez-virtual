@@ -98,7 +98,7 @@ export default function AdminCuadernoPage() {
     setNotaIndSaving(true)
     setNotaIndError(null)
     try {
-      await createNota(tenant.id, salaId, {
+      const notaId = await createNota(tenant.id, salaId, {
         titulo: notaIndTitulo.trim(),
         contenido: notaIndContenido.trim(),
         tipo: 'general',
@@ -108,6 +108,11 @@ export default function AdminCuadernoPage() {
         autorRol: 'admin',
         alumnosDestino: [notaIndAlumnoId],
       })
+      fetch('/api/notifications/send-communication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: tenant.id, salaId, notaId }),
+      }).catch(() => {})
       setNotaIndOk(true)
       setNotaIndTitulo('')
       setNotaIndContenido('')

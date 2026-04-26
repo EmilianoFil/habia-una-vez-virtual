@@ -77,7 +77,7 @@ export default function AlumnoDetailPage() {
     setNotaSaving(true)
     setNotaError(null)
     try {
-      await createNota(tenant.id, alumno.salaActualId, {
+      const notaId = await createNota(tenant.id, alumno.salaActualId, {
         titulo: notaTitulo.trim(),
         contenido: notaContenido.trim(),
         tipo: 'general',
@@ -87,6 +87,11 @@ export default function AlumnoDetailPage() {
         autorRol: claims?.role === 'docente' ? 'docente' : 'admin',
         alumnosDestino: [alumnoId],
       })
+      fetch('/api/notifications/send-communication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: tenant.id, salaId: alumno.salaActualId, notaId }),
+      }).catch(() => {})
       setNotaOk(true)
       setNotaTitulo('')
       setNotaContenido('')

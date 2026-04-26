@@ -103,7 +103,7 @@ export default function DocenteCuadernoPage() {
     setNotaIndSaving(true)
     setNotaIndError(null)
     try {
-      await createNota(tenant.id, salaActiva, {
+      const notaId = await createNota(tenant.id, salaActiva, {
         titulo: notaIndTitulo.trim(),
         contenido: notaIndContenido.trim(),
         tipo: 'general',
@@ -113,6 +113,11 @@ export default function DocenteCuadernoPage() {
         autorRol: 'docente',
         alumnosDestino: [notaIndAlumnoId],
       })
+      fetch('/api/notifications/send-communication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: tenant.id, salaId: salaActiva, notaId }),
+      }).catch(() => {})
       setNotaIndOk(true)
       setNotaIndTitulo('')
       setNotaIndContenido('')
