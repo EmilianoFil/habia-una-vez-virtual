@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Loader2, Filter, PenLine, X } from 'lucide-react'
 import { SkeletonList } from '@/components/ui/Skeleton'
 import { useTenant } from '@/contexts/TenantContext'
@@ -14,6 +14,8 @@ import { TipoNota } from '@/lib/types'
 import { TIPO_NOTA_CONFIG } from '@/lib/services/cuaderno.service'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 type FiltroTipo = TipoNota | 'todos'
 
@@ -24,6 +26,22 @@ export default function PadreComunicacionesPage() {
   const { alumnos } = useAlumnos(tenant.id)
 
   const permitirNotasDePadres = tenant.configuracion?.permitirNotasDePadres ?? false
+
+  // Cargar parentesco del perfil de tutor
+  const [parentesco, setParentesco] = useState<string | null>(null)
+  useEffect(() => {
+    if (!user?.uid || !tenant.id) return
+    getDoc(doc(db, `tenants/${tenant.id}/tutores/${user.uid}`))
+      .then(snap => { if (snap.exists()) setParentesco(snap.data().parentesco ?? null) })
+      .catch(() => {})
+  }, [user?.uid, tenant.id])
+
+  function buildAutorNombre(alumnoNombre?: string): string {
+    const base = user?.displayName ?? user?.email ?? 'Familiar'
+    if (parentesco && alumnoNombre) return `${parentesco} de ${alumnoNombre}`
+    if (parentesco) return `${parentesco} | ${base}`
+    return base
+  }
 
   // Alumnos vinculados a este padre
   const misAlumnos = useMemo(
@@ -69,7 +87,7 @@ export default function PadreComunicacionesPage() {
     if (!salaId || !alumnoActivo || !user) return
     await acusarRecibo(tenant.id, salaId, notaId, {
       tutorId: user.uid,
-      tutorNombre: user.displayName ?? user.email ?? 'Familiar',
+      tutorNombre: buildAutorNombre(alumnoActivo.datosPersonales?.nombre),
       alumnoId: alumnoActivo.id,
       fecha: new Date().toISOString(),
     })
@@ -80,7 +98,7 @@ export default function PadreComunicacionesPage() {
     await addRespuesta(tenant.id, salaId, notaId, {
       id: crypto.randomUUID(),
       autorId: user.uid,
-      autorNombre: user.displayName ?? user.email ?? 'Familiar',
+      autorNombre: buildAutorNombre(alumnoActivo?.datosPersonales?.nombre),
       autorRol: 'padre',
       contenido,
       creadaEn: new Date().toISOString(),
@@ -99,7 +117,7 @@ export default function PadreComunicacionesPage() {
         tipo: 'general',
         files: [],
         autorId: user.uid,
-        autorNombre: user.displayName ?? user.email ?? 'Familiar',
+        autorNombre: buildAutorNombre(alumnoActivo?.datosPersonales?.nombre),
         autorRol: 'padre',
         alumnosDestino: alumnoActivo ? [alumnoActivo.id] : [],
       })
@@ -113,8 +131,8 @@ export default function PadreComunicacionesPage() {
     }
   }
 
-  // Padre sin hijos vinculados
-  if (!loading && misAlumnos.length === 0) {
+  // Padre sin hijos vinculados (esperar a que user.uid esté disponible)
+  if (!loading && user?.uid && misAlumnos.length === 0) {
     return (
       <div className="p-6 lg:p-8">
         <EmptyState

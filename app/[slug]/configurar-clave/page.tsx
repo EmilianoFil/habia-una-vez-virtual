@@ -5,6 +5,8 @@ import { useRouter, useSearchParams, useParams } from 'next/navigation'
 import { Eye, EyeOff, Loader2, CheckCircle, AlertTriangle, Lock } from 'lucide-react'
 import { useTenant } from '@/contexts/TenantContext'
 
+const PARENTESCO_OPCIONES = ['Mamá', 'Papá', 'Tutor/a', 'Abuelo/a', 'Otro']
+
 export default function ConfigurarClavePage() {
   const { tenant } = useTenant()
   const router = useRouter()
@@ -13,6 +15,8 @@ export default function ConfigurarClavePage() {
   const token = searchParams.get('token')
   const slug = params.slug as string
 
+  const [nombre, setNombre] = useState('')
+  const [parentesco, setParentesco] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -39,6 +43,10 @@ export default function ConfigurarClavePage() {
     e.preventDefault()
     setError(null)
 
+    if (!nombre.trim()) {
+      setError('Por favor ingresá tu nombre')
+      return
+    }
     if (password !== confirm) {
       setError('Las contraseñas no coinciden')
       return
@@ -53,7 +61,12 @@ export default function ConfigurarClavePage() {
       const res = await fetch('/api/auth/setup-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword: password }),
+        body: JSON.stringify({
+          token,
+          newPassword: password,
+          nombre: nombre.trim(),
+          parentesco: parentesco || null,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -80,9 +93,9 @@ export default function ConfigurarClavePage() {
           >
             <Lock size={28} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Configurá tu contraseña</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Configurá tu acceso</h1>
           <p className="text-sm text-gray-500 mt-2">
-            Elegí la contraseña con la que vas a ingresar a <strong>{tenant.name}</strong>.
+            Completá tus datos para ingresar a <strong>{tenant.name}</strong>.
           </p>
         </div>
 
@@ -90,7 +103,7 @@ export default function ConfigurarClavePage() {
           <div className="card p-8 text-center space-y-4">
             <CheckCircle size={48} className="text-emerald-500 mx-auto" />
             <h2 className="text-lg font-bold text-gray-900">¡Listo!</h2>
-            <p className="text-sm text-gray-500">Tu contraseña fue configurada. Te estamos redirigiendo al login...</p>
+            <p className="text-sm text-gray-500">Tu acceso fue configurado. Te estamos redirigiendo al login...</p>
           </div>
         ) : (
           <div className="card p-6 space-y-4">
@@ -104,7 +117,39 @@ export default function ConfigurarClavePage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Nueva contraseña
+                  Nombre completo
+                </label>
+                <input
+                  type="text"
+                  value={nombre}
+                  onChange={e => setNombre(e.target.value)}
+                  placeholder="Ej: María García"
+                  required
+                  disabled={isSubmitting}
+                  className="input disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Parentesco / Rol <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <select
+                  value={parentesco}
+                  onChange={e => setParentesco(e.target.value)}
+                  disabled={isSubmitting}
+                  className="input disabled:opacity-50"
+                >
+                  <option value="">Seleccioná...</option>
+                  {PARENTESCO_OPCIONES.map(op => (
+                    <option key={op} value={op}>{op}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Contraseña
                 </label>
                 <div className="relative">
                   <input
@@ -144,11 +189,11 @@ export default function ConfigurarClavePage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || !password || !confirm}
+                disabled={isSubmitting || !nombre.trim() || !password || !confirm}
                 className="btn-primary w-full py-3 mt-2"
               >
                 {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : null}
-                {isSubmitting ? 'Configurando...' : 'Guardar contraseña'}
+                {isSubmitting ? 'Configurando...' : 'Guardar y continuar'}
               </button>
             </form>
           </div>

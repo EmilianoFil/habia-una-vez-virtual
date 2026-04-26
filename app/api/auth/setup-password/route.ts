@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 
 /**
  * POST /api/auth/setup-password
@@ -11,6 +12,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const token: string = body?.token
     const newPassword: string = body?.newPassword
+    const nombre: string | undefined = body?.nombre?.trim()
+    const parentesco: string | undefined = body?.parentesco || undefined
 
     if (!token || !newPassword) {
       return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 })
@@ -32,8 +35,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'El link expiró. Pedile a la institución que te reenvíe el acceso' }, { status: 400 })
     }
 
-    // Actualizar la contraseña via Admin SDK
-    await adminAuth.updateUser(tokenData.uid, { password: newPassword })
+    // Actualizar la contraseña (y displayName si se proveyó)
+    const authUpdate: { password: string; displayName?: string } = { password: newPassword }
+    if (nombre) authUpdate.displayName = nombre
+
+    await adminAuth.updateUser(tokenData.uid, authUpdate)
+
+    // Actualizar nombre + parentesco en el doc de tutor si existe
+    if (nombre && tokenData.tenantId) {
+      try {
+        const tutorRef = adminDb.doc(`tenants/${tokenData.tenantId}/tutores/${tokenData.uid}`)
+        const tutorDoc = await tutorRef.get()
+        if (tutorDoc.exists) {
+          const update: Record<string, any> = { nombre, actualizadoEn: FieldValue.serverTimestamp() }
+          if (parentesco) update.parentesco = parentesco
+          await tutorRef.update(update)
+        }
+      } catch {
+        // No crítico si falla la actualización del tutor doc
+      }
+    }
 
     // Invalidar el token (uso único)
     await adminDb.doc(`setupLinks/${token}`).delete()

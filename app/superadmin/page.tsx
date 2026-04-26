@@ -42,7 +42,12 @@ export default function SuperadminDashboardPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (!user) {
-          router.replace('/superadmin/login')
+          // Solo redirigir si no hay cookie __claims: si existe, Firebase aún está
+          // inicializando el estado de auth y redirigir causaría un loop con el login.
+          const hasClaimsCookie = document.cookie.includes('__claims=')
+          if (!hasClaimsCookie) {
+            router.replace('/superadmin/login')
+          }
           setChecking(false)
           return
         }
@@ -50,7 +55,7 @@ export default function SuperadminDashboardPage() {
         const claims = await getUserClaims(user)
 
         if (claims?.role !== 'superadmin') {
-          router.replace('/superadmin/login')
+          window.location.href = '/superadmin/login'
           setChecking(false)
           return
         }

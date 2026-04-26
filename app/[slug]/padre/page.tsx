@@ -47,7 +47,7 @@ export default function PadreDashboardPage() {
         </div>
       </div>
 
-      {alumnosLoading ? (
+      {(alumnosLoading || !user?.uid) ? (
         <SkeletonGrid count={3} cols="grid-cols-1 md:grid-cols-3" />
       ) : misAlumnos.length === 0 ? (
         <div className="card p-6 flex flex-col items-center justify-center text-center">
