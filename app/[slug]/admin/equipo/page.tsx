@@ -184,7 +184,7 @@ export default function EquipoPage() {
       setAccessModalOpen(false)
 
       // Siempre mostrar el link, el mail puede o no haberse enviado
-      setResetLinkModal({ email: editingDocente.email, link: data.resetLink })
+      setResetLinkModal({ email: editingDocente.email, link: data.setupLink })
 
     } catch (err: any) {
       setError(err.message ?? 'Error al dar acceso')
@@ -232,7 +232,7 @@ export default function EquipoPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setResetLinkModal({ email, link: data.resetLink })
+      setResetLinkModal({ email, link: data.setupLink })
     } catch (err: any) {
       alert('Error: ' + err.message)
     }

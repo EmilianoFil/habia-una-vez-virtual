@@ -422,7 +422,11 @@ export default function AlumnoDetailPage() {
                               if (!res.ok) throw new Error(data.error)
                               await vincularTutorAlumno(tenant.id, alumnoId, data.uid, { nombre: c.nombre, email: c.email! })
                               setOrphanedUids(prev => { const s = new Set(prev); s.delete(tutor!.uid); return s })
-                              alert('Acceso re-creado correctamente. Se envió un mail con el link para crear contraseña.')
+                              if (data.mailStatus === 'sent') {
+                                alert('✅ Acceso re-creado. Mail enviado correctamente.')
+                              } else {
+                                alert(`⚠️ Acceso re-creado, pero el mail NO se envió.\n\nMotivo: ${data.mailError ?? 'desconocido'}\n\nLink manual para compartir:\n${data.setupLink}`)
+                              }
                             } catch (err: any) {
                               alert('Error: ' + err.message)
                             } finally {
@@ -451,7 +455,11 @@ export default function AlumnoDetailPage() {
                             const data = await res.json()
                             if (!res.ok) throw new Error(data.error)
                             await vincularTutorAlumno(tenant.id, alumnoId, data.uid, { nombre: c.nombre, email: c.email! })
-                            alert('Acceso concedido correctamente.')
+                            if (data.mailStatus === 'sent') {
+                              alert('✅ Acceso concedido. Mail enviado correctamente.')
+                            } else {
+                              alert(`⚠️ Acceso concedido, pero el mail NO se envió.\n\nMotivo: ${data.mailError ?? 'desconocido'}\n\nLink manual para compartir:\n${data.setupLink}`)
+                            }
                           } catch (err: any) {
                             alert('Error: ' + err.message)
                           } finally {

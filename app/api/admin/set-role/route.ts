@@ -99,9 +99,15 @@ export async function POST(request: NextRequest) {
     const setupLink = `${APP_URL}/${tenantSlug}/configurar-clave?token=${setupToken}`
 
     // 7. Intentar enviar email (opcional, no bloquea la respuesta)
+    let mailStatus: 'sent' | 'skipped' | 'error' = 'skipped'
+    let mailError: string | null = null
+
     try {
       const emailSettings = tenantData?.configuracion?.emailSettings
-      if (emailSettings?.enabled) {
+      if (!emailSettings?.enabled) {
+        mailStatus = 'skipped'
+        mailError = 'Email desactivado o no configurado en Ajustes'
+      } else {
         const generalTemplateUrl: string | null = tenantData?.configuracion?.emailTemplateUrl ?? null
         let templateHtml: string | null = null
         if (generalTemplateUrl) {
@@ -115,16 +121,21 @@ export async function POST(request: NextRequest) {
           tenantData.config.name,
           templateHtml
         )
+        mailStatus = 'sent'
       }
-    } catch (mailErr) {
+    } catch (mailErr: any) {
       console.error('[API/admin/set-role] Error al enviar mail:', mailErr)
+      mailStatus = 'error'
+      mailError = mailErr?.message ?? 'Error desconocido al enviar mail'
     }
 
     return NextResponse.json({
       success: true,
       message: isNewUser ? `Usuario creado y rol ${role} asignado.` : `Rol ${role} asignado exitosamente.`,
       setupLink,
-      uid: userRecord.uid
+      uid: userRecord.uid,
+      mailStatus,
+      mailError,
     })
 
   } catch (error: any) {
