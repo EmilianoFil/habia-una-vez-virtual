@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       expiresAt,
     })
 
-    const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://habia-una-vez-virtual.web.app'
+    const APP_URL = process.env.APP_URL ?? 'https://habia-una-vez-virtual.web.app'
     const setupLink = `${APP_URL}/${tenantSlug}/configurar-clave?token=${setupToken}`
 
     // 7. Intentar enviar email (opcional, no bloquea la respuesta)

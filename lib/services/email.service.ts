@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 import { EmailSettings, NotaCuaderno } from '@/lib/types'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://habia-una-vez-virtual.web.app'
+const APP_URL = process.env.APP_URL ?? 'https://habia-una-vez-virtual.web.app'
 
 function stripHtmlToText(html: string): string {
   return html
