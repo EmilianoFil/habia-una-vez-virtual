@@ -297,7 +297,7 @@ export function NotaCard({
       {/* Footer */}
       <div
         className={cn(
-          'px-5 py-4 mt-4 flex items-center justify-between border-t border-gray-50',
+          'px-5 py-4 mt-4 border-t border-gray-50',
           nota.tipo === 'urgente' ? 'bg-red-50/40' : ''
         )}
       >
@@ -321,25 +321,25 @@ export function NotaCard({
                 : `${cantAcuses} acuse${cantAcuses !== 1 ? 's' : ''} de recibo`
               : 'Sin acuses aún'}
           </span>
+          {mode === 'padre' && yaAcusó && (
+            <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-green-600">
+              <CheckCircle2 size={13} />
+              Recibo acusado
+            </span>
+          )}
         </div>
 
-        {/* Botón acusar (solo padre, y solo si no acusó) */}
+        {/* Botón acusar (solo padre, y solo si no acusó) — ancho completo en mobile */}
         {mode === 'padre' && !yaAcusó && onAcusar && (
           <button
             onClick={handleAcusar}
             disabled={acusando}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95"
+            className="mt-3 w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white transition-all active:scale-95"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
             {acusando ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
             Acusar recibo
           </button>
-        )}
-        {mode === 'padre' && yaAcusó && (
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
-            <CheckCircle2 size={13} />
-            Recibo acusado
-          </span>
         )}
       </div>
     </article>
