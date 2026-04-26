@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
           emailSettings,
           email,
           setupLink,
-          tenantData.config.name,
+          tenantData?.config?.name ?? 'Institución',
           templateHtml
         )
         mailStatus = 'sent'
