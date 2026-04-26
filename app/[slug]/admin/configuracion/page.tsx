@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, Plus, Trash2, Clock, Users, Loader2, CheckCircle2, Mail, ShieldAlert, MessageSquarePlus } from 'lucide-react'
+import { Save, Plus, Trash2, Clock, Users, Loader2, CheckCircle2, Mail, ShieldAlert, MessageSquarePlus, Wifi, WifiOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useTenant } from '@/contexts/TenantContext'
 import { updateTenantConfig } from '@/lib/services/tenant.service'
@@ -35,6 +35,12 @@ export default function ConfiguracionPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [logoUpdating, setLogoUpdating] = useState(false)
+  const [testingMail, setTestingMail] = useState(false)
+  const [mailTestResult, setMailTestResult] = useState<'ok' | 'error' | null>(null)
+  const [mailTestError, setMailTestError] = useState<string | null>(null)
+  const emailGuardado = tenant.configuracion?.emailSettings?.enabled &&
+    tenant.configuracion?.emailSettings?.email === emailSettings.email &&
+    tenant.configuracion?.emailSettings?.appPassword === emailSettings.appPassword
 
   useEffect(() => {
     if (tenant.configuracion?.turnos) {
@@ -259,11 +265,23 @@ export default function ConfiguracionPage() {
                   <Mail size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-gray-900">Activar envíos automáticos</p>
+                  <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    Activar envíos automáticos
+                    {emailGuardado && mailTestResult === 'ok' && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <Wifi size={10} /> Conectado
+                      </span>
+                    )}
+                    {mailTestResult === 'error' && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                        <WifiOff size={10} /> Error de conexión
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-gray-500">Mandar mails de bienvenida y cambio de clave.</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setEmailSettings({ ...emailSettings, enabled: !emailSettings.enabled })}
                 className={`w-12 h-6 rounded-full transition-all relative ${emailSettings.enabled ? 'bg-indigo-600' : 'bg-gray-200'}`}
               >
@@ -313,14 +331,48 @@ export default function ConfiguracionPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-2">
+                {mailTestResult === 'error' && mailTestError && (
+                  <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
+                    <WifiOff size={13} className="shrink-0 mt-0.5" />
+                    {mailTestError}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={async () => {
+                      setTestingMail(true)
+                      setMailTestResult(null)
+                      setMailTestError(null)
+                      try {
+                        const res = await fetch('/api/admin/test-mail', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ emailSettings, tenantId: tenant.id }),
+                        })
+                        const data = await res.json()
+                        if (!res.ok || !data.success) throw new Error(data.error ?? 'Error desconocido')
+                        setMailTestResult('ok')
+                      } catch (err: any) {
+                        setMailTestResult('error')
+                        setMailTestError(err.message)
+                      } finally {
+                        setTestingMail(false)
+                      }
+                    }}
+                    disabled={testingMail || !emailSettings.email || !emailSettings.appPassword}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+                  >
+                    {testingMail ? <Loader2 size={14} className="animate-spin" /> : <Wifi size={14} />}
+                    {testingMail ? 'Probando...' : 'Probar conexión'}
+                  </button>
                   <button
                     onClick={handleSave}
                     disabled={saving}
                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-bold transition-all"
                   >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    Guardar Configuración de Mail
+                    Guardar
                   </button>
                 </div>
               </div>

@@ -40,7 +40,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
       <div
@@ -66,7 +66,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-100 shrink-0 bg-gray-50">
+          <div className="px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 shrink-0 bg-gray-50">
             {footer}
           </div>
         )}
